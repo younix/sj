@@ -5,13 +5,14 @@ LFLAGS=$(pkg-config --libs libxml-2.0)
 EXPAT=-I/usr/include -L/usr/lib -lexpat
 LFLAGS=-L/usr/local/lib -lxml2
 
+.PHONY: all test
 all: sj expat
 
 sj: sj.c
 	gcc -std=c99 -pedantic -g ${CFLAGS} ${LFLAGS} -o $@ $<
 
-test: test.c
-	gcc -std=c99 -pedantic -g ${CFLAGS} ${LFLAGS} -o $@ $<
-
 expat: expat.c
 	gcc -std=c99 -pedantic -g ${EXPAT} -o $@ $<
+
+test: expat
+	./expat < server.txt 
