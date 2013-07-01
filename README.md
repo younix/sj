@@ -1,0 +1,4 @@
+sj
+==
+
+simple jabber client
