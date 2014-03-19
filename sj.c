@@ -34,12 +34,14 @@
 
 #include "sasl/sasl.h"
 
+/* we parsing the xml-stream at this tag-level-depth */
 #define TAG_LEVEL 2
 
-/* xml parsing context */
 struct context {
-	/* backend and xml parser */
+	/* socket to xmpp server */
 	int sock;
+
+	/* xml parser */
 	XML_Parser parser;
 	int depth;
 	int start_tag;
@@ -282,7 +284,8 @@ end_tag(void *data, const char *name)
 }
 
 void
-decl_handler(void *data, const char *version, const char *encoding, int standalone)
+decl_handler(void *data, const char *version, const char *encoding,
+    int standalone)
 {
 	struct context *ctx = data;
 
