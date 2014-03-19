@@ -1,18 +1,18 @@
-CFLAGS=$(pkg-config --cflags libxml-2.0)
-CFLAGS=-I/usr/local/include/libxml2 -I/usr/local/include
-LFLAGS=$(pkg-config --libs libxml-2.0)
-#EXPAT=$(pkg-config --cflags --libs expat)
-EXPAT=-I/usr/include -L/usr/lib -lexpat
-LFLAGS=-L/usr/local/lib -lxml2
+CFLAGS=-std=c99 -pedantic -Wall -Wextra -g
+LD_EXPAT=-L/usr/lib -lexpat
+CF_EXPAT=-I/usr/include
 
-.PHONY: all test
-all: sj expat
+.PHONY: all test clean debug
+.SUFFIXES: .o .c
 
-sj: sj.c
-	gcc -std=c99 -pedantic -g ${CFLAGS} ${LFLAGS} -o $@ $<
+all: sj
+clean:
+	rm -f sj *.o *.core
+debug:
+	gdb sj sj.core
 
-expat: expat.c
-	gcc -std=c99 -pedantic -g ${EXPAT} -o $@ $<
+sj: sj.o sasl/sasl.o sasl/base64.o
+	gcc $(LD_EXPAT) -O0 -o $@ sj.o sasl/sasl.o sasl/base64.o -lm
 
-test: expat
-	./expat < server.txt 
+.c.o:
+	gcc $(CFLAGS) $(CF_EXPAT) -O0 -c -o $@ $<

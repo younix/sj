@@ -7,12 +7,24 @@
 	version='1.0'
 	xml:lang='en'>
 
-<stream:features>
+<stream:features att="1">
 	<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
 	<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
 		<mechanism>PLAIN</mechanism>
 		<mechanism>DIGEST-MD5</mechanism>
 		<mechanism>SCRAM-SHA-1</mechanism>
+	</mechanisms>
+	<c xmlns='http://jabber.org/protocol/caps'
+		hash='sha-1'
+		node='http://www.process-one.net/en/ejabberd/'
+		ver='o8zQAtrb2wELMmZizvbnpvqp5cE='/>
+	<register xmlns='http://jabber.org/features/iq-register'/>
+</stream:features>
+<stream:features att="2">
+	<starttls xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>
+	<mechanisms xmlns='urn:ietf:params:xml:ns:xmpp-sasl'>
+		<mechanism>PLAIN</mechanism>
+		<mechanism>MD5</mechanism>
 	</mechanisms>
 	<c xmlns='http://jabber.org/protocol/caps'
 		hash='sha-1'

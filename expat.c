@@ -1,19 +1,16 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <expat.h>
 
 #define STREAM ""
+#define TAG_LEVEL 2
 
 struct context {
 	int depth;
-	int found_tag;
 	int start_tag;
-	char *buf;
-	char *buf_ptr;
-	char *parse_ptr;
-	ssize_t buf_size;
 	XML_Parser parser;
 };
 
@@ -21,27 +18,34 @@ void
 start_tag(void *data, const char *el, const char **attr)
 {
 	struct context *ctx = data;
-
-////	if (strcmp(el, "stream") == 0 && ctx->depth == 1)
-
-	printf("start: %d, %s\n", ctx->depth, el);
-	if (ctx->depth == 2)
-		ctx->start_tag = XML_GetCurrentByteIndex(ctx->parser);
+	int offset = 0, size = 0;
 	ctx->depth++;
+
+	if (ctx->depth == TAG_LEVEL) {
+		XML_GetInputContext(ctx->parser, &offset, &size);
+		ctx->start_tag = offset;
+	}
 }
 
 void
 end_tag(void *data, const char *name)
 {
 	struct context *ctx = data;
+	int offset = 0, size = 0;
+	const char *buf;
+
 	ctx->depth--;
 
-	if (ctx->depth <= 3) {
-		printf("end: %d, %s\n",
-		    XML_GetCurrentByteIndex(ctx->parser), name);
-//		XML_GetCurrentByteIndex(ctx->parser);
-		printf("\n\n%.*s\n", XML_GetCurrentByteIndex(ctx->parser) - ctx->start_tag,
-		    ctx->buf + ctx->start_tag);
+	if (ctx->depth == TAG_LEVEL - 1) {
+		buf = XML_GetInputContext(ctx->parser, &offset, &size);
+		int end_tag = XML_GetCurrentByteIndex(ctx->parser);
+
+		printf("%.*s",
+		    offset - ctx->start_tag,
+		    buf + ctx->start_tag);
+
+		if (XML_GetCurrentByteCount(ctx->parser) != 0)
+			printf("<%s>\n", strrchr(name, '/'));
 	}
 }
 
@@ -56,34 +60,29 @@ main(int argc, char**argv)
 	XML_Parser parser = XML_ParserCreateNS(NULL, ':');
 	ctx.parser = parser;
 	ctx.depth = 0;
-	ctx.found_tag = 0;
-	ctx.buf_size = BUFSIZ;
-	ctx.buf = calloc(1, ctx.buf_size);
-	ctx.buf_ptr = ctx.buf;
-	ctx.parse_ptr = ctx.buf;
 
 	XML_SetElementHandler(parser, start_tag, end_tag);
 	XML_SetUserData(parser, &ctx);
-	while ((size = read(STDIN_FILENO, ctx.buf_ptr + offset,
-	    ctx.buf_size - offset))) {
-		parse_size = XML_Parse(parser, ctx.parse_ptr, size, 1);
-		printf("parse: %d\n", size);
 
-		if (ctx.found_tag == 0) {
-			ctx.buf_size *= 2;
-			ctx.buf = ctx.buf = realloc(ctx.buf, ctx.buf_size);
-			if (ctx.buf == NULL)
-				exit(EXIT_FAILURE);
-			ctx.buf_ptr = ctx.buf + size;
-			ctx.parse_ptr = ctx.buf + size;
-			offset += size;
-		} else {
-			offset = 0;
-			ctx.buf_ptr = ctx.buf;
+	for (;;) {
+		int bytes_read;
+		void *buff = XML_GetBuffer(parser, 10);
+		if (buff == NULL) {
+			/* handle error */
 		}
-	}
 
-	printf("ende!!!\n");
+		bytes_read = read(STDIN_FILENO, buff, 10);
+		if (bytes_read < 0) {
+			/* handle error */
+		}
+
+		if (!XML_ParseBuffer(parser, bytes_read, bytes_read == 0)) {
+			/* handle parse error */
+		}
+
+		if (bytes_read == 0)
+			break;
+	}
 
 	return 0;
 }

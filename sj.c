@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2013-2014 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -14,43 +14,177 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <err.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
-#include <err.h>
-#include <netdb.h>
+#include <unistd.h>
 
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/time.h>
-
+#include <sys/stat.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <libxml/tree.h>
+#include <expat.h>
+
+#include "sasl/sasl.h"
+
+#define TAG_LEVEL 2
+
+/* xml parsing context */
+struct context {
+	/* backend and xml parser */
+	int sock;
+	XML_Parser parser;
+	int depth;
+	int start_tag;
+	int decl_done;
+
+	/* connection information */
+	char *user;
+	char *pass;
+	char *server;
+	char *port;
+	char *resource;
+
+	/* file system frontend */
+	char *dir;
+	int fd_out;
+	int fd_in;
+
+	/* state of the xmpp session */
+	int state;
+};
+
+#define NULL_CONTEXT {				\
+	0,	/*int sock;*/			\
+	NULL,	/*XML_Parser parser;*/		\
+	0,	/*int depth;*/			\
+	0,	/*int start_tag;*/		\
+	0,	/*int decl_done;*/		\
+	NULL,	/*char *user;*/			\
+	NULL,	/*char *pass;*/			\
+	NULL,	/*char *server;*/		\
+	NULL,	/*char *port;*/			\
+	NULL,	/*char *resource;*/		\
+	NULL,	/*char *dir;*/			\
+	0,	/*int fd_out;*/			\
+	0,	/*int fd_in;*/			\
+	0	/*int state;*/			\
+}
+
+/* XMPP session states */
+enum state {OPEN = 0, AUTH, BIND_OUT, BIND, SESSION};
+
+void init_parser(struct context *ctx);
 
 void
-xmpp_init(int sock, char *user, char *server)
+xmpp_ping(struct context *ctx)
+{
+	char *msg = NULL;
+	ssize_t size = asprintf(&msg,
+	    "<iq from='%s@%s' to='%s' id='ping' type='get'>"
+		"<ping xmlns='urn:xmpp:ping'/>"
+	    "</iq>", ctx->user, ctx->server, ctx->server);
+
+	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+		perror(__func__);
+
+	free(msg);
+}
+
+void
+xmpp_session(struct context *ctx)
+{
+	char *msg = NULL;
+	ssize_t size = asprintf(&msg,
+	    "<iq to='%s' "
+		"type='set' "
+		"id='sess_1'>"
+		"<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>"
+	    "</iq>" , ctx->server);
+
+	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+		perror(__func__);
+
+	free(msg);
+}
+
+void
+xmpp_bind(struct context *ctx)
+{
+	char *msg = NULL;
+	ssize_t size = asprintf(&msg,
+	    "<iq type='set' id='bind_2'>"
+		"<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>"
+		    "<resource>%s</resource>"
+		"</bind>"
+	    "</iq>", ctx->resource);
+
+	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+		perror(__func__);
+
+	ctx->state = BIND_OUT;
+
+	free(msg);
+}
+
+void
+xmpp_auth_type(struct context *ctx, char *type)
+{
+	char *msg = NULL;
+	ssize_t size = asprintf(&msg,
+		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
+		" mechanism='%s'/>", type);
+
+	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+		perror(__func__);
+
+	free(msg);
+}
+
+void
+xmpp_auth(struct context *ctx)
+{
+	char *authstr = sasl_plain(ctx->user, ctx->pass);
+
+	char *msg = NULL;
+	ssize_t size = asprintf(&msg,
+		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
+		" mechanism='PLAIN'>%s</auth>", authstr);
+
+	size = send(ctx->sock, msg, strlen(msg), 0);
+
+	free(authstr);
+	free(msg);
+}
+
+void
+xmpp_init(struct context *ctx)
 {
 	char *msg = NULL;
 	ssize_t size = asprintf(&msg,
 	    "<?xml version='1.0'?>"
 	    "<stream:stream "
-//		"from='%s@%s' "
+		"from='%s@%s' "
 		"to='%s' "
 		"version='1.0' "
 		"xml:lang='en' "
 		"xmlns='jabber:client' "
-		"xmlns:stream='http://etherx.jabber.org/streams'>\n\n",
-	    server);
-//	    user, server, server);
+		"xmlns:stream='http://etherx.jabber.org/streams'>\n",
+	    ctx->user, ctx->server, ctx->server);
 
-	printf("size: %d\nmsg:%s\n", size, msg);
+	printf("size: %zd\nmsg:%s", size, msg);
 
-	size = send(sock, msg, strlen(msg), 0);
-//	size = write(sock, msg, strlen(msg));
-	printf("send size: %d\n", size);
+	if (send(ctx->sock, msg, strlen(msg), 0) < 0)
+		perror(__func__);
+
+	free(msg);
 }
 
 void
@@ -61,31 +195,198 @@ xmpp_close(int sock)
 }
 
 void
+xmpp_message(struct context *ctx, char *to, char *text) {
+	char *msg = NULL;
+	ssize_t size = asprintf(&msg,
+	    "<message "
+	    "    id='ktx72v49'"
+	    "    to='%s'"
+	    "    type='chat'"
+	    "    xml:lang='en'>"
+	    "<body>%s</body>"
+	    "</message>",
+	    to, text);
+
+	size = send(ctx->sock, msg, strlen(msg), 0);
+
+	free(msg);
+}
+
+void
+start_tag(void *data, const char *el, const char **attr)
+{
+	struct context *ctx = data;
+	int offset = 0, size = 0;
+	ctx->depth++;
+
+	if (ctx->depth == TAG_LEVEL) {
+		XML_GetInputContext(ctx->parser, &offset, &size);
+		ctx->start_tag = offset;
+	}
+}
+
+void
+end_tag(void *data, const char *name)
+{
+	struct context *ctx = data;
+	int offset = 0, size = 0;
+	const char *buf;
+
+	char *tag_name = strrchr(name, '/');
+	if (tag_name != NULL)
+		tag_name += 1;
+	else
+		tag_name = (char *)name;
+
+	printf("end!\n");
+
+	ctx->depth--;
+	if (ctx->depth == TAG_LEVEL - 1) {
+		buf = XML_GetInputContext(ctx->parser, &offset, &size);
+		XML_GetCurrentByteIndex(ctx->parser);
+
+		write(ctx->fd_out, buf + ctx->start_tag,
+		    offset - ctx->start_tag);
+
+		if (XML_GetCurrentByteCount(ctx->parser) != 0)
+			printf("</%s>\n", tag_name);
+
+		if (strcmp("streams:features", tag_name) == 0) {
+			printf("\n\nEND OF FREATURE\n\n");
+			if (ctx->state == OPEN)
+				xmpp_auth(ctx);
+			else if (ctx->state == AUTH)
+				xmpp_bind(ctx);
+			else
+				printf("state: %d\n", ctx->state);
+		}
+
+	}
+
+	if (strcmp("urn:ietf:params:xml:ns:xmpp-bind:bind", tag_name) == 0 &&
+	    ctx->state == BIND_OUT) {
+		ctx->state = BIND;
+		xmpp_session(ctx);
+	}
+
+	printf("tag: %s\n", tag_name);
+
+	/* SASL authentification successful */
+	if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
+		printf("AUTH!!!\n");
+		ctx->state = AUTH;
+		init_parser(ctx);
+		xmpp_init(ctx);
+		ctx->decl_done++;
+	}
+}
+
+void
+decl_handler(void *data, const char *version, const char *encoding, int standalone)
+{
+	struct context *ctx = data;
+
+	if (ctx->decl_done == 0) {
+		xmpp_init(ctx);
+		ctx->decl_done = 1;
+	} else {
+		ctx->decl_done = 1;
+	}
+}
+
+void
+init_dir(struct context *ctx)
+{
+	if (mkdir(ctx->dir, S_IRWXU) < 0)
+		if (errno != EEXIST)
+			perror(__func__);
+
+	char *file = NULL;
+	asprintf(&file, "%s/out", ctx->dir);
+	if ((ctx->fd_out = open(file, O_WRONLY|O_CREAT|O_TRUNC,
+	    S_IRUSR|S_IWUSR)) < 0)
+		perror(__func__);
+	free(file);
+
+	asprintf(&file, "%s/in", ctx->dir);
+	if (mkfifo(file, S_IRUSR|S_IWUSR) > -1)
+		if (errno != EEXIST)
+			perror(__func__);
+
+	if ((ctx->fd_in = open(file, O_RDONLY|O_NONBLOCK, 0)) < 0)
+		perror(__func__);
+	free(file);
+}
+
+/* (re)initialize eXpat parser */
+void
+init_parser(struct context *ctx)
+{
+	if (ctx->parser == NULL) {
+		ctx->parser = XML_ParserCreateNS(NULL, ':');
+	} else {
+		XML_ParserFree(ctx->parser);
+		ctx->parser = XML_ParserCreateNS(NULL, ':');
+	}
+
+	XML_SetXmlDeclHandler(ctx->parser, decl_handler);
+	XML_SetElementHandler(ctx->parser, start_tag, end_tag);
+	XML_SetUserData(ctx->parser, ctx);
+	ctx->depth = 0;
+}
+
+void
 usage(void)
 {
-	fprintf(stderr, "sj -u <user> -s <server>\n");
+	fprintf(stderr, "sj OPTIONS\n"
+		"OPTIONS:\n"
+		"\t-U <user>"
+		"\t-s <server>"
+		"\t-p <port>"
+		"\t-r <resource>"
+		"\t-d <directory>\n");
 	exit(EXIT_FAILURE);
 }
 
 int
 main(int argc, char**argv)
 {
-	char *user = "user";
-	char *server = "jabber.ccc.de";
-	char *port = "5222";
-	char buff[BUFSIZ];
-	buff[0] = '\0';
-
 	struct addrinfo hints, *addrinfo = NULL, *addrinfo0 = NULL;
-	int sock = 0, ch;
+	int ch;
 
-	while ((ch = getopt(argc, argv, "s:p:")) != -1) {
+	/* struct with all context informations */
+	struct context ctx = NULL_CONTEXT;
+	ctx.sock = 0;
+	ctx.user = NULL;
+	ctx.pass = NULL;
+	ctx.server = NULL;
+	ctx.port = "5222";
+	ctx.dir = "xmpp";
+	ctx.resource = "sj";
+	ctx.parser = NULL;
+	ctx.depth = 0;		/* depth of the current parsing tag level */
+	ctx.decl_done = 0;	/* already send xml decl to server */
+	ctx.state = OPEN;	/* set inital state of the connection */
+
+	while ((ch = getopt(argc, argv, "d:s:p:U:P:r:")) != -1) {
 		switch (ch) {
+		case 'd':
+			ctx.dir = strdup(optarg);
+			break;
 		case 's':
-			server = strdup(optarg);
+			ctx.server = strdup(optarg);
 			break;
 		case 'p':
-			port = strdup(optarg);
+			ctx.port = strdup(optarg);
+			break;
+		case 'U':
+			ctx.user = strdup(optarg);
+			break;
+		case 'P':
+			ctx.pass = strdup(optarg);
+			break;
+		case 'r':
+			ctx.resource = strdup(optarg);
 			break;
 		default:
 			usage();
@@ -99,15 +400,16 @@ main(int argc, char**argv)
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	getaddrinfo(server, port, &hints, &addrinfo0);
+	getaddrinfo(ctx.server, ctx.port, &hints, &addrinfo0);
 
 	for (addrinfo = addrinfo0; addrinfo; addrinfo = addrinfo->ai_next) {
-
-		if ((sock = socket(addrinfo->ai_family, addrinfo->ai_socktype, 0)) < 0)
+		if ((ctx.sock =
+		    socket(addrinfo->ai_family, addrinfo->ai_socktype, 0)) < 0)
 			continue;
 
-		if (connect(sock, addrinfo->ai_addr, addrinfo->ai_addrlen) < 0) {
-			close(sock);
+		if (connect(ctx.sock, addrinfo->ai_addr,
+		    addrinfo->ai_addrlen) < 0) {
+			close(ctx.sock);
 			continue;
 		}
 
@@ -116,57 +418,71 @@ main(int argc, char**argv)
 
 	freeaddrinfo(addrinfo0);
 
-	if (sock < 0)
+	if (ctx.sock < 0)
 		goto err;
 
-//	xmpp_init(sock, user, server);
-	xmpp_init(sock, "user", "jabber.ccc.de");
+	init_dir(&ctx);
+	init_parser(&ctx);
+	xmpp_init(&ctx);
+	ctx.decl_done++;
 
-//	xmlDocPtr doc = xmlNewDoc(BAD_CAST "1.0");
-//	xmlNodePtr node;
-//	xmlBufferPtr buf = xmlBufferCreate();
-//	xmlBufNodeDump(buf, doc, node, 0, 0);
-//	xmlBufferDump(stdout, buf);
-
-	fd_set readfds;
-	int max_fd = sock;
+	int max_fd = ctx.sock;
 	int n;
-	FD_ZERO(&readfds);
-	FD_SET(sock, &readfds);
+	fd_set readfds;
 
-	printf("event loop\n");
+	/* timeinterval for keep alive pings */
+	struct timeval tv = {30, 0};
 
 	for (;;) {
-		select(max_fd+1, &readfds, NULL, NULL, NULL);
-//		printf("trigger!\n");
-		if (FD_ISSET(sock, &readfds)) {
-			n = recv(sock, buff, BUFSIZ, 0);
-			buff[n] = '\0';
-//			node = xmlStringGetNodeList(doc, BAD_CAST buff);
-//			printf("node: %p\n", node);
-//			xmlBufNodeDump(buf, doc, node, 0, 0);
-//			xmlBufferDump(stdout, buf);
-			printf("n: %d", n);
-			printf("r: %s\n", buff);
-		} else {
+		FD_ZERO(&readfds);
+		FD_SET(ctx.sock, &readfds);
+		FD_SET(ctx.fd_in, &readfds);
+
+		max_fd = ctx.sock;
+		if (max_fd < ctx.fd_in)
+			max_fd = ctx.fd_in;
+
+		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
+
+		/* data from xmpp server */
+		if (FD_ISSET(ctx.sock, &readfds)) {
+			void *buff = XML_GetBuffer(ctx.parser, BUFSIZ);
+			if (buff == NULL)
+				goto err;
+
+			if ((n = recv(ctx.sock, buff, BUFSIZ, 0)) < 0)
+				goto err;
+
+			printf("NET: %.*s\n", n, (char *)buff);
+			printf("size: %d\n", n);
+
+			if (XML_ParseBuffer(ctx.parser, n, n == 0) ==
+			    XML_STATUS_ERROR) {
+				printf("XML_ParseBuffer: %s\nn: %d\n",
+				    XML_ErrorString(XML_GetErrorCode(
+					ctx.parser)),
+				    n);
+				goto err;
+			}
+		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
+			char buf[BUFSIZ];
+			ssize_t n = 0;
+			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0) {
+				send(ctx.sock, buf, n, 0);
+			}
+		} else if (sel == 0) {
+			xmpp_ping(&ctx);
+		} else { /* data from FIFO */
 			printf("other event!\n");
 		}
-		if (n < 1)
-			break;
 	}
-/*
-	xmlDocPtr doc = xmlNewDoc(BAD_CAST "1.0");
-	xmlNodePtr node = xmlNewNode(NULL, (xmlChar*)"iq");
-	xmlBufferPtr buf = xmlBufferCreate();
-	xmlBufNodeDump(buf, doc, node, 0, 0);
-	xmlBufferDump(stdout, buf);
 
 	fprintf(stdout, "</stream:stream>");
-	close(sock);
-*/
+	close(ctx.sock);
+
 	return EXIT_SUCCESS;
 
  err:
-	perror(NULL);
+	perror(__func__);
 	return EXIT_FAILURE;
 }
