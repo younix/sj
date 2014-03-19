@@ -51,6 +51,7 @@ struct context {
 	char *user;
 	char *pass;
 	char *server;
+	char *host;
 	char *port;
 	char *resource;
 
@@ -72,6 +73,7 @@ struct context {
 	NULL,	/*char *user;*/			\
 	NULL,	/*char *pass;*/			\
 	NULL,	/*char *server;*/		\
+	NULL,	/*char *host;*/			\
 	NULL,	/*char *port;*/			\
 	NULL,	/*char *resource;*/		\
 	NULL,	/*char *dir;*/			\
@@ -254,7 +256,7 @@ end_tag(void *data, const char *name)
 			printf("</%s>\n", tag_name);
 
 		if (strcmp("streams:features", tag_name) == 0) {
-			printf("\n\nEND OF FREATURE\n\n");
+			printf("\n\nEND OF FEATURE\n\n");
 			if (ctx->state == OPEN)
 				xmpp_auth(ctx);
 			else if (ctx->state == AUTH)
@@ -371,13 +373,16 @@ main(int argc, char**argv)
 	ctx.decl_done = 0;	/* already send xml decl to server */
 	ctx.state = OPEN;	/* set inital state of the connection */
 
-	while ((ch = getopt(argc, argv, "d:s:p:U:P:r:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:s:H:p:U:P:r:")) != -1) {
 		switch (ch) {
 		case 'd':
 			ctx.dir = strdup(optarg);
 			break;
 		case 's':
 			ctx.server = strdup(optarg);
+			break;
+		case 'H':
+			ctx.host = strdup(optarg);
 			break;
 		case 'p':
 			ctx.port = strdup(optarg);
@@ -399,11 +404,14 @@ main(int argc, char**argv)
 	argc -= optind;
 	argv += optind;
 
+	if (ctx.host == NULL)
+		ctx.host = ctx.server;
+
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
 
-	getaddrinfo(ctx.server, ctx.port, &hints, &addrinfo0);
+	getaddrinfo(ctx.host, ctx.port, &hints, &addrinfo0);
 
 	for (addrinfo = addrinfo0; addrinfo; addrinfo = addrinfo->ai_next) {
 		if ((ctx.sock =

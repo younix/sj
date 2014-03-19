@@ -12,7 +12,7 @@ debug:
 	gdb sj sj.core
 
 sj: sj.o sasl/sasl.o sasl/base64.o
-	gcc $(LD_EXPAT) -O0 -o $@ sj.o sasl/sasl.o sasl/base64.o -lm
+	gcc $(LD_EXPAT) -O3 -o $@ sj.o sasl/sasl.o sasl/base64.o -lm
 
 .c.o:
 	gcc $(CFLAGS) $(CF_EXPAT) -O0 -c -o $@ $<
