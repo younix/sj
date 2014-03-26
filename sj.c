@@ -65,21 +65,21 @@ struct context {
 };
 
 #define NULL_CONTEXT {				\
-	0,	/*int sock;*/			\
-	NULL,	/*XML_Parser parser;*/		\
-	0,	/*int depth;*/			\
-	0,	/*int start_tag;*/		\
-	0,	/*int decl_done;*/		\
-	NULL,	/*char *user;*/			\
-	NULL,	/*char *pass;*/			\
-	NULL,	/*char *server;*/		\
-	NULL,	/*char *host;*/			\
-	NULL,	/*char *port;*/			\
-	NULL,	/*char *resource;*/		\
-	NULL,	/*char *dir;*/			\
-	0,	/*int fd_out;*/			\
-	0,	/*int fd_in;*/			\
-	0	/*int state;*/			\
+	0,	/* int sock; */			\
+	NULL,	/* XML_Parser parser; */	\
+	0,	/* int depth; */		\
+	0,	/* int start_tag; */		\
+	0,	/* int decl_done; */		\
+	NULL,	/* char *user; */		\
+	NULL,	/* char *pass; */		\
+	NULL,	/* char *server; */		\
+	NULL,	/* char *host; */		\
+	NULL,	/* char *port; */		\
+	NULL,	/* char *resource; */		\
+	NULL,	/* char *dir; */		\
+	0,	/* int fd_out; */		\
+	0,	/* int fd_in; */		\
+	0	/* int state; */		\
 }
 
 /* XMPP session states */
@@ -221,10 +221,13 @@ start_tag(void *data, const char *el, const char **attr)
 {
 	struct context *ctx = data;
 	int offset = 0, size = 0;
+	char *buf = NULL;
 	ctx->depth++;
 
+	buf = XML_GetInputContext(ctx->parser, &offset, &size);
+	printf("START: ->%.*s<-\n\n\n", size, (buf + offset));
+
 	if (ctx->depth == TAG_LEVEL) {
-		XML_GetInputContext(ctx->parser, &offset, &size);
 		ctx->start_tag = offset;
 	}
 }
@@ -234,7 +237,7 @@ end_tag(void *data, const char *name)
 {
 	struct context *ctx = data;
 	int offset = 0, size = 0;
-	const char *buf;
+	char *buf;
 
 	char *tag_name = strrchr(name, '/');
 	if (tag_name != NULL)
@@ -242,21 +245,21 @@ end_tag(void *data, const char *name)
 	else
 		tag_name = (char *)name;
 
-	printf("end!\n");
+//	printf("end!\n");
 
 	ctx->depth--;
 	if (ctx->depth == TAG_LEVEL - 1) {
 		buf = XML_GetInputContext(ctx->parser, &offset, &size);
-		XML_GetCurrentByteIndex(ctx->parser);
+		//XML_GetCurrentByteIndex(ctx->parser);
 
 		write(ctx->fd_out, buf + ctx->start_tag,
 		    offset - ctx->start_tag);
 
-		if (XML_GetCurrentByteCount(ctx->parser) != 0)
-			printf("</%s>\n", tag_name);
+//		if (XML_GetCurrentByteCount(ctx->parser) != 0)
+//			printf("</%s>\n", tag_name);
 
 		if (strcmp("streams:features", tag_name) == 0) {
-			printf("\n\nEND OF FEATURE\n\n");
+//			printf("\n\nEND OF FEATURE\n\n");
 			if (ctx->state == OPEN)
 				xmpp_auth(ctx);
 			else if (ctx->state == AUTH)
@@ -273,11 +276,11 @@ end_tag(void *data, const char *name)
 		xmpp_session(ctx);
 	}
 
-	printf("tag: %s\n", tag_name);
+//	printf("tag: %s\n", tag_name);
 
 	/* SASL authentification successful */
 	if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
-		printf("AUTH!!!\n");
+//		printf("AUTH!!!\n");
 		ctx->state = AUTH;
 		init_parser(ctx);
 		xmpp_init(ctx);
@@ -407,10 +410,10 @@ main(int argc, char**argv)
 	if (ctx.host == NULL)
 		ctx.host = ctx.server;
 
+	/* prepare network connection to xmpp server */
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = PF_UNSPEC;
 	hints.ai_socktype = SOCK_STREAM;
-
 	getaddrinfo(ctx.host, ctx.port, &hints, &addrinfo0);
 
 	for (addrinfo = addrinfo0; addrinfo; addrinfo = addrinfo->ai_next) {
@@ -426,11 +429,8 @@ main(int argc, char**argv)
 
 		break;
 	}
-
 	freeaddrinfo(addrinfo0);
-
-	if (ctx.sock < 0)
-		goto err;
+	if (ctx.sock < 0) goto err;	/* no network connection */
 
 	init_dir(&ctx);
 	init_parser(&ctx);
@@ -457,24 +457,17 @@ main(int argc, char**argv)
 
 		/* data from xmpp server */
 		if (FD_ISSET(ctx.sock, &readfds)) {
-			void *buff = XML_GetBuffer(ctx.parser, BUFSIZ);
-			if (buff == NULL)
-				goto err;
+			char *buff = XML_GetBuffer(ctx.parser, BUFSIZ);
+			if (buff == NULL) goto err;
 
-			if ((n = recv(ctx.sock, buff, BUFSIZ, 0)) < 0)
-				goto err;
+			if ((n = recv(ctx.sock, buff, BUFSIZ, 0)) < 0) goto err;
 
-			printf("NET: %.*s\n", n, (char *)buff);
-			printf("size: %d\n", n);
+//			printf("NET: %.*s\n", n, buff);
+//			printf("size: %d\n", n);
 
-			if (XML_ParseBuffer(ctx.parser, n, n == 0) ==
-			    XML_STATUS_ERROR) {
-				printf("XML_ParseBuffer: %s\nn: %d\n",
-				    XML_ErrorString(XML_GetErrorCode(
-					ctx.parser)),
-				    n);
+			if (XML_ParseBuffer(ctx.parser, n, n == 0)
+			    == XML_STATUS_ERROR)
 				goto err;
-			}
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
 			char buf[BUFSIZ];
 			ssize_t n = 0;
@@ -482,6 +475,7 @@ main(int argc, char**argv)
 				send(ctx.sock, buf, n, 0);
 			}
 		} else if (sel == 0) {
+			fprintf(stdout, "sending ping to server\n");
 			xmpp_ping(&ctx);
 		} else { /* data from FIFO */
 			printf("other event!\n");
@@ -494,6 +488,8 @@ main(int argc, char**argv)
 	return EXIT_SUCCESS;
 
  err:
+	fprintf(stderr, "XML_ERROR: %s\n",
+	    XML_ErrorString(XML_GetErrorCode(ctx.parser)));
 	perror(__func__);
 	return EXIT_FAILURE;
 }

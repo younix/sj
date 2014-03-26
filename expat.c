@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <unistd.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #include <expat.h>
 
@@ -14,6 +14,8 @@ struct context {
 	XML_Parser parser;
 };
 
+#define NULL_CONTEXT { 0, 0, NULL }
+
 void
 start_tag(void *data, const char *el, const char **attr)
 {
@@ -21,10 +23,16 @@ start_tag(void *data, const char *el, const char **attr)
 	int offset = 0, size = 0;
 	ctx->depth++;
 
+	const char *buf = XML_GetInputContext(ctx->parser, &offset, &size);
+	int pos = XML_GetCurrentByteIndex(ctx->parser);
+	printf("START: D:%d ->%.*s<-\n", ctx->depth, size, buf+offset);
+	printf("START: D:%d ->%.*s<-\n", ctx->depth, size, buf+pos);
+
 	if (ctx->depth == TAG_LEVEL) {
-		XML_GetInputContext(ctx->parser, &offset, &size);
 		ctx->start_tag = offset;
 	}
+	if (ctx->depth > 1)
+		exit(EXIT_FAILURE);
 }
 
 void
@@ -52,7 +60,7 @@ end_tag(void *data, const char *name)
 int
 main(int argc, char**argv)
 {
-	struct context ctx = {0};
+	struct context ctx = NULL_CONTEXT;
 	ssize_t size = 0;
 	ssize_t offset = 0;
 	int parse_size;
@@ -73,7 +81,7 @@ main(int argc, char**argv)
 
 		bytes_read = read(STDIN_FILENO, buff, 10);
 		if (bytes_read < 0) {
-			/* handle error */
+			perror("read(2)");
 		}
 
 		if (!XML_ParseBuffer(parser, bytes_read, bytes_read == 0)) {
