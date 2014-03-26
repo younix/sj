@@ -1,0 +1,6 @@
+[submodule "bxml"]
+	path = bxml
+	url = https://github.com/younix/bxml.git
+[submodule "sasl"]
+	path = sasl
+	url = https://github.com/younix/sasl.git

@@ -58,7 +58,7 @@ end_tag(void *data, const char *name)
 }
 
 int
-main(int argc, char**argv)
+main()
 {
 	struct context ctx = NULL_CONTEXT;
 	ssize_t size = 0;

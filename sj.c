@@ -221,10 +221,10 @@ start_tag(void *data, const char *el, const char **attr)
 {
 	struct context *ctx = data;
 	int offset = 0, size = 0;
-	char *buf = NULL;
+	const char *buf = NULL;
 	ctx->depth++;
 
-	buf = XML_GetInputContext(ctx->parser, &offset, &size);
+	XML_GetInputContext(ctx->parser, &offset, &size);
 	printf("START: ->%.*s<-\n\n\n", size, (buf + offset));
 
 	if (ctx->depth == TAG_LEVEL) {
@@ -237,7 +237,7 @@ end_tag(void *data, const char *name)
 {
 	struct context *ctx = data;
 	int offset = 0, size = 0;
-	char *buf;
+	const char *buf;
 
 	char *tag_name = strrchr(name, '/');
 	if (tag_name != NULL)
