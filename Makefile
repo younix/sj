@@ -23,5 +23,5 @@ clean:
 debug:
 	gdb sj sj.core
 
-include bxml/Makefile
-include sasl/Makefile
+include bxml/Makefile.inc
+include sasl/Makefile.inc
