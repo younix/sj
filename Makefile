@@ -1,19 +1,19 @@
-CFLAGS=-std=c99 -pedantic -Wall -Wextra -g
-LD_EXPAT=-L/usr/lib -lexpat
-CF_EXPAT=-I/usr/include
+CFLAGS=-std=c99 -pedantic -Wall -Wextra -O3 -g -Wno-unused
+CFLAGS_MXML=`pkg-config --cflags mxml`
+LIBS_MXML=`pkg-config --libs mxml`
 
-.PHONY: all test clean debug
+.PHONY: all test clean debug update
 .SUFFIXES: .o .c
 
-all: sj expat
-sj: sj.o sasl/sasl.o sasl/base64.o
-	gcc $(LD_EXPAT) -O3 -o $@ sj.o sasl/sasl.o sasl/base64.o -lm
+all: sj
+sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
+	gcc -o $@ sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o $(LIBS_MXML) -lm
 
-expat: expat.o
-	gcc $(LD_EXPAT) -o3 -o $@ -lm expat.o
+sj.o: sj.c bxml/bxml.h sasl/sasl.h
+	gcc $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
 
 .c.o:
-	gcc $(CFLAGS) $(CF_EXPAT) -O0 -c -o $@ $<
+	gcc $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f sj *.o *.core expat
@@ -22,6 +22,10 @@ clean:
 
 debug:
 	gdb sj sj.core
+
+update:
+	cd bxml; git pull origin master
+	cd sasl; git pull origin master
 
 include bxml/Makefile.inc
 include sasl/Makefile.inc

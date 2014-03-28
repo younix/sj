@@ -31,8 +31,10 @@
 #include <arpa/inet.h>
 
 #include <expat.h>
+#include <mxml.h>
 
 #include "sasl/sasl.h"
+#include "bxml/bxml.h"
 
 /* we parsing the xml-stream at this tag-level-depth */
 #define TAG_LEVEL 2
@@ -42,10 +44,8 @@ struct context {
 	int sock;
 
 	/* xml parser */
-	XML_Parser parser;
-	int depth;
-	int start_tag;
 	int decl_done;
+	struct bxml_ctx *bxml;
 
 	/* connection information */
 	char *user;
@@ -66,10 +66,8 @@ struct context {
 
 #define NULL_CONTEXT {				\
 	0,	/* int sock; */			\
-	NULL,	/* XML_Parser parser; */	\
-	0,	/* int depth; */		\
-	0,	/* int start_tag; */		\
 	0,	/* int decl_done; */		\
+	NULL,	/* struct bxml_ctx; */		\
 	NULL,	/* char *user; */		\
 	NULL,	/* char *pass; */		\
 	NULL,	/* char *server; */		\
@@ -183,7 +181,7 @@ xmpp_init(struct context *ctx)
 		"xmlns:stream='http://etherx.jabber.org/streams'>\n",
 	    ctx->user, ctx->server, ctx->server);
 
-	printf("size: %zd\nmsg:%s", size, msg);
+//	printf("size: %zd\nmsg:%s", size, msg);
 
 	if (send(ctx->sock, msg, strlen(msg), 0) < 0)
 		perror(__func__);
@@ -216,58 +214,42 @@ xmpp_message(struct context *ctx, char *to, char *text) {
 	free(msg);
 }
 
-void
-start_tag(void *data, const char *el, const char **attr)
+/*
+ * This callback function is called from bxml-lib if a whole xml-tag from
+ * the xmpp-server is recieved.
+ */
+static void
+server_tag(char *tag, void *data)
 {
+	static mxml_node_t *tree = NULL;
 	struct context *ctx = data;
-	int offset = 0, size = 0;
-	const char *buf = NULL;
-	ctx->depth++;
+	const char *base = "<?xml ?><stream:stream></stream:stream>";
 
-	XML_GetInputContext(ctx->parser, &offset, &size);
-	printf("START: ->%.*s<-\n\n\n", size, (buf + offset));
+	fprintf(stderr, "SERVER: %s\n\n\n", tag);
 
-	if (ctx->depth == TAG_LEVEL) {
-		ctx->start_tag = offset;
-	}
-}
+	if (tree == NULL)
+		tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 
-void
-end_tag(void *data, const char *name)
-{
-	struct context *ctx = data;
-	int offset = 0, size = 0;
-	const char *buf;
+	if (tree == NULL)
+		err(EXIT_FAILURE, "no tree found");
 
-	char *tag_name = strrchr(name, '/');
-	if (tag_name != NULL)
-		tag_name += 1;
-	else
-		tag_name = (char *)name;
+	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
 
-//	printf("end!\n");
+	if (tree->child->next == NULL)
+		err(EXIT_FAILURE, "no tree found");
 
-	ctx->depth--;
-	if (ctx->depth == TAG_LEVEL - 1) {
-		buf = XML_GetInputContext(ctx->parser, &offset, &size);
-		//XML_GetCurrentByteIndex(ctx->parser);
+ 	const char *tag_name = mxmlGetElement(tree->child->next);
+	printf("e: ->%s<-\n\n", tag_name); 
 
-		write(ctx->fd_out, buf + ctx->start_tag,
-		    offset - ctx->start_tag);
-
-//		if (XML_GetCurrentByteCount(ctx->parser) != 0)
-//			printf("</%s>\n", tag_name);
-
-		if (strcmp("streams:features", tag_name) == 0) {
-//			printf("\n\nEND OF FEATURE\n\n");
-			if (ctx->state == OPEN)
-				xmpp_auth(ctx);
-			else if (ctx->state == AUTH)
-				xmpp_bind(ctx);
-			else
-				printf("state: %d\n", ctx->state);
-		}
-
+	/* authentication and binding */
+	if (strcmp("stream:features", tag_name) == 0) {
+		fprintf(stderr, "AUTH\n\n");
+		if (ctx->state == OPEN)
+			xmpp_auth(ctx);
+		else if (ctx->state == AUTH)
+			xmpp_bind(ctx);
+		else
+			printf("state: %d\n", ctx->state);
 	}
 
 	if (strcmp("urn:ietf:params:xml:ns:xmpp-bind:bind", tag_name) == 0 &&
@@ -276,16 +258,16 @@ end_tag(void *data, const char *name)
 		xmpp_session(ctx);
 	}
 
-//	printf("tag: %s\n", tag_name);
-
 	/* SASL authentification successful */
-	if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
-//		printf("AUTH!!!\n");
+	//if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
+	if (strcmp("success", tag_name) == 0) {
 		ctx->state = AUTH;
 		init_parser(ctx);
 		xmpp_init(ctx);
 		ctx->decl_done++;
 	}
+
+	mxmlDelete(tree->child->next);
 }
 
 void
@@ -312,12 +294,14 @@ init_dir(struct context *ctx)
 	char *file = NULL;
 	asprintf(&file, "%s/out", ctx->dir);
 	if ((ctx->fd_out = open(file, O_WRONLY|O_CREAT|O_TRUNC,
-	    S_IRUSR|S_IWUSR)) < 0)
+	    S_IRUSR|S_IWUSR)) < 0) {
+		fprintf(stderr, "open_error:");
 		perror(__func__);
+	}
 	free(file);
 
 	asprintf(&file, "%s/in", ctx->dir);
-	if (mkfifo(file, S_IRUSR|S_IWUSR) > -1)
+	if (mkfifo(file, S_IRUSR|S_IWUSR) < 0)
 		if (errno != EEXIST)
 			perror(__func__);
 
@@ -330,17 +314,8 @@ init_dir(struct context *ctx)
 void
 init_parser(struct context *ctx)
 {
-	if (ctx->parser == NULL) {
-		ctx->parser = XML_ParserCreateNS(NULL, ':');
-	} else {
-		XML_ParserFree(ctx->parser);
-		ctx->parser = XML_ParserCreateNS(NULL, ':');
-	}
-
-	XML_SetXmlDeclHandler(ctx->parser, decl_handler);
-	XML_SetElementHandler(ctx->parser, start_tag, end_tag);
-	XML_SetUserData(ctx->parser, ctx);
-	ctx->depth = 0;
+	/* bxml */
+	ctx->bxml->depth = 0;
 }
 
 void
@@ -371,8 +346,6 @@ main(int argc, char**argv)
 	ctx.port = "5222";
 	ctx.dir = "xmpp";
 	ctx.resource = "sj";
-	ctx.parser = NULL;
-	ctx.depth = 0;		/* depth of the current parsing tag level */
 	ctx.decl_done = 0;	/* already send xml decl to server */
 	ctx.state = OPEN;	/* set inital state of the connection */
 
@@ -432,6 +405,10 @@ main(int argc, char**argv)
 	freeaddrinfo(addrinfo0);
 	if (ctx.sock < 0) goto err;	/* no network connection */
 
+	/* init block xml parser */
+	ctx.bxml = bxml_ctx_init(server_tag, &ctx);
+	ctx.bxml->block_depth = 1;
+
 	init_dir(&ctx);
 	init_parser(&ctx);
 	xmpp_init(&ctx);
@@ -442,7 +419,7 @@ main(int argc, char**argv)
 	fd_set readfds;
 
 	/* timeinterval for keep alive pings */
-	struct timeval tv = {30, 0};
+	struct timeval tv = {10, 0};
 
 	for (;;) {
 		FD_ZERO(&readfds);
@@ -457,17 +434,9 @@ main(int argc, char**argv)
 
 		/* data from xmpp server */
 		if (FD_ISSET(ctx.sock, &readfds)) {
-			char *buff = XML_GetBuffer(ctx.parser, BUFSIZ);
-			if (buff == NULL) goto err;
-
+			char buff[BUFSIZ];
 			if ((n = recv(ctx.sock, buff, BUFSIZ, 0)) < 0) goto err;
-
-//			printf("NET: %.*s\n", n, buff);
-//			printf("size: %d\n", n);
-
-			if (XML_ParseBuffer(ctx.parser, n, n == 0)
-			    == XML_STATUS_ERROR)
-				goto err;
+			bxml_add_buf(ctx.bxml, buff, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
 			char buf[BUFSIZ];
 			ssize_t n = 0;
@@ -488,8 +457,6 @@ main(int argc, char**argv)
 	return EXIT_SUCCESS;
 
  err:
-	fprintf(stderr, "XML_ERROR: %s\n",
-	    XML_ErrorString(XML_GetErrorCode(ctx.parser)));
 	perror(__func__);
 	return EXIT_FAILURE;
 }
