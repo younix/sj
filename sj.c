@@ -44,7 +44,6 @@ struct context {
 	int sock;
 
 	/* xml parser */
-	int decl_done;
 	struct bxml_ctx *bxml;
 
 	/* connection information */
@@ -66,7 +65,6 @@ struct context {
 
 #define NULL_CONTEXT {				\
 	0,	/* int sock; */			\
-	0,	/* int decl_done; */		\
 	NULL,	/* struct bxml_ctx; */		\
 	NULL,	/* char *user; */		\
 	NULL,	/* char *pass; */		\
@@ -264,24 +262,9 @@ server_tag(char *tag, void *data)
 		ctx->state = AUTH;
 		init_parser(ctx);
 		xmpp_init(ctx);
-		ctx->decl_done++;
 	}
 
 	mxmlDelete(tree->child->next);
-}
-
-void
-decl_handler(void *data, const char *version, const char *encoding,
-    int standalone)
-{
-	struct context *ctx = data;
-
-	if (ctx->decl_done == 0) {
-		xmpp_init(ctx);
-		ctx->decl_done = 1;
-	} else {
-		ctx->decl_done = 1;
-	}
 }
 
 void
@@ -346,7 +329,6 @@ main(int argc, char**argv)
 	ctx.port = "5222";
 	ctx.dir = "xmpp";
 	ctx.resource = "sj";
-	ctx.decl_done = 0;	/* already send xml decl to server */
 	ctx.state = OPEN;	/* set inital state of the connection */
 
 	while ((ch = getopt(argc, argv, "d:s:H:p:U:P:r:")) != -1) {
@@ -412,7 +394,6 @@ main(int argc, char**argv)
 	init_dir(&ctx);
 	init_parser(&ctx);
 	xmpp_init(&ctx);
-	ctx.decl_done++;
 
 	int max_fd = ctx.sock;
 	int n;
