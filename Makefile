@@ -1,4 +1,5 @@
-CFLAGS=-std=c99 -pedantic -Wall -Wextra -O3 -g -Wno-unused
+CFLAGS=-std=c99 -pedantic -Wall -Wextra -O3 -g
+NOWARNING=-Wno-unused
 CFLAGS_MXML=`pkg-config --cflags mxml`
 LIBS_MXML=`pkg-config --libs mxml`
 

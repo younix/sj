@@ -44,7 +44,6 @@ struct context {
 	int sock;
 
 	/* xml parser */
-	int decl_done;
 	struct bxml_ctx *bxml;
 
 	/* connection information */
@@ -66,7 +65,6 @@ struct context {
 
 #define NULL_CONTEXT {				\
 	0,	/* int sock; */			\
-	0,	/* int decl_done; */		\
 	NULL,	/* struct bxml_ctx; */		\
 	NULL,	/* char *user; */		\
 	NULL,	/* char *pass; */		\
@@ -83,41 +81,33 @@ struct context {
 /* XMPP session states */
 enum state {OPEN = 0, AUTH, BIND_OUT, BIND, SESSION};
 
-void init_parser(struct context *ctx);
-
-void
+static void
 xmpp_ping(struct context *ctx)
 {
-	char *msg = NULL;
-	ssize_t size = asprintf(&msg,
+	char msg[BUFSIZ];
+	int size = snprintf(msg, sizeof msg,
 	    "<iq from='%s@%s' to='%s' id='ping' type='get'>"
 		"<ping xmlns='urn:xmpp:ping'/>"
 	    "</iq>", ctx->user, ctx->server, ctx->server);
 
-	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+	if ((size = send(ctx->sock, msg, size, 0)) < 0)
 		perror(__func__);
-
-	free(msg);
 }
 
-void
+static void
 xmpp_session(struct context *ctx)
 {
-	char *msg = NULL;
-	ssize_t size = asprintf(&msg,
-	    "<iq to='%s' "
-		"type='set' "
-		"id='sess_1'>"
+	char msg[BUFSIZ];
+	int size = snprintf(msg, sizeof msg,
+	    "<iq to='%s' type='set' id='sess_1'>"
 		"<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>"
 	    "</iq>" , ctx->server);
 
-	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+	if ((size = send(ctx->sock, msg, size, 0)) < 0)
 		perror(__func__);
-
-	free(msg);
 }
 
-void
+static void
 xmpp_bind(struct context *ctx)
 {
 	char *msg = NULL;
@@ -136,41 +126,37 @@ xmpp_bind(struct context *ctx)
 	free(msg);
 }
 
-void
+static void
 xmpp_auth_type(struct context *ctx, char *type)
 {
-	char *msg = NULL;
-	ssize_t size = asprintf(&msg,
+	char msg[BUFSIZ];
+	int size = snprintf(msg, sizeof msg,
 		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
 		" mechanism='%s'/>", type);
 
 	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
 		perror(__func__);
-
-	free(msg);
 }
 
-void
+static void
 xmpp_auth(struct context *ctx)
 {
+	char msg[BUFSIZ];
 	char *authstr = sasl_plain(ctx->user, ctx->pass);
-
-	char *msg = NULL;
-	ssize_t size = asprintf(&msg,
+	int size = snprintf(msg, sizeof msg,
 		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
 		" mechanism='PLAIN'>%s</auth>", authstr);
 
-	size = send(ctx->sock, msg, strlen(msg), 0);
-
+	if (send(ctx->sock, msg, size, 0) < 0)
+		perror(__func__);;
 	free(authstr);
-	free(msg);
 }
 
-void
+static void
 xmpp_init(struct context *ctx)
 {
-	char *msg = NULL;
-	ssize_t size = asprintf(&msg,
+	char msg[BUFSIZ];
+	int size = snprintf(msg, sizeof msg,
 	    "<?xml version='1.0'?>"
 	    "<stream:stream "
 		"from='%s@%s' "
@@ -181,37 +167,31 @@ xmpp_init(struct context *ctx)
 		"xmlns:stream='http://etherx.jabber.org/streams'>\n",
 	    ctx->user, ctx->server, ctx->server);
 
-//	printf("size: %zd\nmsg:%s", size, msg);
-
-	if (send(ctx->sock, msg, strlen(msg), 0) < 0)
+	if (send(ctx->sock, msg, size, 0) < 0)
 		perror(__func__);
-
-	free(msg);
 }
 
-void
+static void
 xmpp_close(int sock)
 {
-	char *msg = "</stream:stream>";
-	send(sock, msg, strlen(msg), 0);
+	if (send(sock, "</stream:stream>", 16, 0) < 0)
+		perror(__func__);
 }
 
-void
+static void
 xmpp_message(struct context *ctx, char *to, char *text) {
-	char *msg = NULL;
-	ssize_t size = asprintf(&msg,
+	char msg[BUFSIZ];
+	int size = snprintf(msg, sizeof msg,
 	    "<message "
 	    "    id='ktx72v49'"
 	    "    to='%s'"
 	    "    type='chat'"
 	    "    xml:lang='en'>"
-	    "<body>%s</body>"
-	    "</message>",
-	    to, text);
+	    "<body>", to);
 
-	size = send(ctx->sock, msg, strlen(msg), 0);
-
-	free(msg);
+	if (send(ctx->sock, msg, size, 0) < 0) perror(__func__); 
+	if (send(ctx->sock, text, strlen(text), 0) < 0) perror(__func__);
+	if (send(ctx->sock, "</body></message>", 17, 0) < 0) perror(__func__);
 }
 
 /*
@@ -259,32 +239,20 @@ server_tag(char *tag, void *data)
 	}
 
 	/* SASL authentification successful */
-	//if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
+//	if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
 	if (strcmp("success", tag_name) == 0) {
 		ctx->state = AUTH;
-		init_parser(ctx);
+		ctx->bxml->depth = 0; /* The stream will reset after success */
 		xmpp_init(ctx);
-		ctx->decl_done++;
 	}
 
 	mxmlDelete(tree->child->next);
 }
 
-void
-decl_handler(void *data, const char *version, const char *encoding,
-    int standalone)
-{
-	struct context *ctx = data;
-
-	if (ctx->decl_done == 0) {
-		xmpp_init(ctx);
-		ctx->decl_done = 1;
-	} else {
-		ctx->decl_done = 1;
-	}
-}
-
-void
+/*
+ * This function creates and opens the files used as front end.
+ */
+static void
 init_dir(struct context *ctx)
 {
 	if (mkdir(ctx->dir, S_IRWXU) < 0)
@@ -310,15 +278,7 @@ init_dir(struct context *ctx)
 	free(file);
 }
 
-/* (re)initialize eXpat parser */
-void
-init_parser(struct context *ctx)
-{
-	/* bxml */
-	ctx->bxml->depth = 0;
-}
-
-void
+static void
 usage(void)
 {
 	fprintf(stderr, "sj OPTIONS\n"
@@ -346,7 +306,6 @@ main(int argc, char**argv)
 	ctx.port = "5222";
 	ctx.dir = "xmpp";
 	ctx.resource = "sj";
-	ctx.decl_done = 0;	/* already send xml decl to server */
 	ctx.state = OPEN;	/* set inital state of the connection */
 
 	while ((ch = getopt(argc, argv, "d:s:H:p:U:P:r:")) != -1) {
@@ -410,9 +369,7 @@ main(int argc, char**argv)
 	ctx.bxml->block_depth = 1;
 
 	init_dir(&ctx);
-	init_parser(&ctx);
 	xmpp_init(&ctx);
-	ctx.decl_done++;
 
 	int max_fd = ctx.sock;
 	int n;
