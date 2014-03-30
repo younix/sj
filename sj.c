@@ -86,7 +86,7 @@ xmpp_ping(struct context *ctx)
 {
 	char msg[BUFSIZ];
 	int size = snprintf(msg, sizeof msg,
-	    "<iq from='%s@%s' to='%s' id='ping' type='get'>"
+	    "<iq from='%s@%s/sj' to='%s' id='ping-sj' type='get'>"
 		"<ping xmlns='urn:xmpp:ping'/>"
 	    "</iq>", ctx->user, ctx->server, ctx->server);
 
@@ -232,15 +232,17 @@ server_tag(char *tag, void *data)
 			printf("state: %d\n", ctx->state);
 	}
 
-	if (strcmp("urn:ietf:params:xml:ns:xmpp-bind:bind", tag_name) == 0 &&
+	if (strcmp("iq", tag_name) == 0 &&
+	    strcmp("bind_2", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
 	    ctx->state == BIND_OUT) {
 		ctx->state = BIND;
 		xmpp_session(ctx);
 	}
 
 	/* SASL authentification successful */
-//	if (strcmp("urn:ietf:params:xml:ns:xmpp-sasl:success", tag_name) == 0) {
-	if (strcmp("success", tag_name) == 0) {
+	if (strcmp("success", tag_name) == 0 &&
+	    strcmp("urn:ietf:params:xml:ns:xmpp-sasl",
+		   mxmlElementGetAttr(tree->child->next, "xmlns")) == 0) {
 		ctx->state = AUTH;
 		ctx->bxml->depth = 0; /* The stream will reset after success */
 		xmpp_init(ctx);
