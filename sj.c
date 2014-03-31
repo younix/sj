@@ -198,17 +198,15 @@ xmpp_message(struct context *ctx, char *to, char *text) {
 static void
 server_tag(char *tag, void *data)
 {
-	static mxml_node_t *tree = NULL;
 	struct context *ctx = data;
+	/* HACK: we need this, cause mxml can't parse tags by itself */
+	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 
 	fprintf(stderr, "SERVER: %s\n\n\n", tag);
 
-	if (tree == NULL)
-		tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
-
-	if (tree == NULL)
-		err(EXIT_FAILURE, "no tree found");
+	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
+	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
 
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
 
@@ -370,7 +368,8 @@ main(int argc, char**argv)
 	xmpp_init(&ctx);
 
 	int max_fd = ctx.sock;
-	int n;
+	char buf[BUFSIZ];
+	ssize_t n = 0;
 	fd_set readfds;
 
 	/* timeinterval for keep alive pings */
@@ -389,14 +388,11 @@ main(int argc, char**argv)
 
 		/* data from xmpp server */
 		if (FD_ISSET(ctx.sock, &readfds)) {
-			char buff[BUFSIZ];
-			if ((n = recv(ctx.sock, buff, BUFSIZ, 0)) < 0) goto err;
-			bxml_add_buf(ctx.bxml, buff, n);
+			if ((n = recv(ctx.sock, buf, BUFSIZ, 0)) < 0) goto err;
+			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
-			char buf[BUFSIZ];
-			ssize_t n = 0;
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0) {
-				send(ctx.sock, buf, n, 0);
+				if (send(ctx.sock, buf, n, 0) < 0) goto err;
 			}
 		} else if (sel == 0) {
 			fprintf(stdout, "sending ping to server\n");
@@ -405,11 +401,6 @@ main(int argc, char**argv)
 			printf("other event!\n");
 		}
 	}
-
-	fprintf(stdout, "</stream:stream>");
-	close(ctx.sock);
-
-	return EXIT_SUCCESS;
 
  err:
 	perror(__func__);
