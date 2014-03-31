@@ -6,9 +6,14 @@ LIBS_MXML=`pkg-config --libs mxml`
 .PHONY: all test clean debug update
 .SUFFIXES: .o .c
 
-all: sj
+BINS=sj messaged
+
+all: $(BINS)
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 	gcc -o $@ sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o $(LIBS_MXML) -lm
+
+messaged: messaged.o
+	gcc -o $@ messaged.o
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	gcc $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
@@ -17,7 +22,7 @@ sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	gcc $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f sj *.o *.core expat
+	rm -f $(BINS) *.o *.core expat
 	cd bxml; $(MAKE) clean
 	cd sasl; $(MAKE) clean
 
