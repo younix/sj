@@ -291,11 +291,11 @@ usage(void)
 {
 	fprintf(stderr, "usage: sj OPTIONS\n"
 		"OPTIONS:\n"
-		"\t-U <user>"
-		"\t-H <host>"
-		"\t-s <server>"
-		"\t-p <port>"
-		"\t-r <resource>"
+		"\t-U <user>\n"
+		"\t-H <host>\n"
+		"\t-s <server>\n"
+		"\t-p <port>\n"
+		"\t-r <resource>\n"
 		"\t-d <directory>\n");
 	exit(EXIT_FAILURE);
 }
@@ -348,6 +348,9 @@ main(int argc, char**argv)
 	}
 	argc -= optind;
 	argv += optind;
+
+	if (ctx.server == NULL || ctx.user == NULL)
+		usage();
 
 	if (ctx.host == NULL)
 		ctx.host = ctx.server;
