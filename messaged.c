@@ -26,7 +26,7 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 void
 usage(void)
 {
-	fprintf(stderr, "messaged [-j JID]\n");
+	fprintf(stderr, "usage: messaged -j JID\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -50,6 +50,9 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+
+	if (ctx.jid == NULL)
+		usage();
 
 	asprintf(&ctx.id, "messaged-%d", getpid());
 	msg_send(&ctx, "test", "younix@jabber.ccc.de");

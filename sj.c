@@ -52,6 +52,7 @@ struct context {
 	char *host;
 	char *port;
 	char *resource;
+	char *id;
 
 	/* file system frontend */
 	char *dir;
@@ -71,6 +72,7 @@ struct context {
 	NULL,	/* char *host; */		\
 	NULL,	/* char *port; */		\
 	NULL,	/* char *resource; */		\
+	NULL,	/* char *id; */			\
 	NULL,	/* char *dir; */		\
 	0,	/* int fd_out; */		\
 	0,	/* int fd_in; */		\
@@ -82,9 +84,10 @@ xmpp_ping(struct context *ctx)
 {
 	char msg[BUFSIZ];
 	int size = snprintf(msg, sizeof msg,
-	    "<iq from='%s@%s/%s' to='%s' id='ping-sj' type='get'>"
+	    "<iq from='%s@%s/%s' to='%s' id='%s' type='get'>"
 		"<ping xmlns='urn:xmpp:ping'/>"
-	    "</iq>", ctx->user, ctx->server, ctx->resource, ctx->server);
+	    "</iq>",
+	    ctx->user, ctx->server, ctx->resource, ctx->server, ctx->id);
 
 	if ((size = send(ctx->sock, msg, size, 0)) < 0)
 		perror(__func__);
@@ -286,7 +289,7 @@ init_dir(struct context *ctx)
 static void
 usage(void)
 {
-	fprintf(stderr, "sj OPTIONS\n"
+	fprintf(stderr, "usage: sj OPTIONS\n"
 		"OPTIONS:\n"
 		"\t-U <user>"
 		"\t-H <host>"
@@ -309,6 +312,7 @@ main(int argc, char**argv)
 	ctx.user = NULL;
 	ctx.pass = NULL;
 	ctx.server = NULL;
+	asprintf(&ctx.id, "sj-%d", getpid());
 	ctx.port = "5222";
 	ctx.dir = "xmpp";
 	ctx.resource = "sj";
