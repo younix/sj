@@ -36,8 +36,8 @@
 #include "sasl/sasl.h"
 #include "bxml/bxml.h"
 
-/* we parsing the xml-stream at this tag-level-depth */
-#define TAG_LEVEL 2
+/* XMPP session states */
+enum xmpp_state {OPEN, AUTH, BIND_OUT, BIND, SESSION};
 
 struct context {
 	/* socket to xmpp server */
@@ -60,7 +60,7 @@ struct context {
 	int fd_in;
 
 	/* state of the xmpp session */
-	int state;
+	enum xmpp_state state;
 };
 
 #define NULL_CONTEXT {				\
@@ -75,11 +75,8 @@ struct context {
 	NULL,	/* char *dir; */		\
 	0,	/* int fd_out; */		\
 	0,	/* int fd_in; */		\
-	0	/* int state; */		\
+	OPEN	/* int state; */		\
 }
-
-/* XMPP session states */
-enum state {OPEN = 0, AUTH, BIND_OUT, BIND, SESSION};
 
 static void
 xmpp_ping(struct context *ctx)
@@ -223,7 +220,6 @@ server_tag(char *tag, void *data)
 
 	/* authentication and binding */
 	if (strcmp("stream:features", tag_name) == 0) {
-		fprintf(stderr, "AUTH\n\n");
 		if (ctx->state == OPEN)
 			xmpp_auth(ctx);
 		else if (ctx->state == AUTH)
