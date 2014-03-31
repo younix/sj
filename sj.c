@@ -203,7 +203,7 @@ server_tag(char *tag, void *data)
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 
-	fprintf(stderr, "SERVER: %s\n\n\n", tag);
+	fprintf(stderr, "SERVER: %s\n\n", tag);
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
@@ -214,7 +214,6 @@ server_tag(char *tag, void *data)
 		err(EXIT_FAILURE, "no tree found");
 
  	const char *tag_name = mxmlGetElement(tree->child->next);
-	printf("e: ->%s<-\n\n", tag_name); 
 
 	/* authentication and binding */
 	if (strcmp("stream:features", tag_name) == 0) {
@@ -226,11 +225,23 @@ server_tag(char *tag, void *data)
 			printf("state: %d\n", ctx->state);
 	}
 
+	/* binding completed */
 	if (strcmp("iq", tag_name) == 0 &&
 	    strcmp("bind_2", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
 	    ctx->state == BIND_OUT) {
 		ctx->state = BIND;
 		xmpp_session(ctx);
+	}
+
+	if (strcmp("iq", tag_name) == 0 &&
+	    strcmp("sess_1", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
+	    ctx->state == BIND) {
+		fprintf(stderr, "\nTRY TO SESSION:%s\n\n",
+		    mxmlElementGetAttr(tree->child->next->child, "xmlns"));
+		if (tree->child->next->child != NULL &&
+		    strcmp("urn:ietf:params:xml:ns:xmpp-session",
+		    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0)
+		ctx->state = SESSION;
 	}
 
 	/* SASL authentification successful */
@@ -280,6 +291,7 @@ usage(void)
 	fprintf(stderr, "sj OPTIONS\n"
 		"OPTIONS:\n"
 		"\t-U <user>"
+		"\t-H <host>"
 		"\t-s <server>"
 		"\t-p <port>"
 		"\t-r <resource>"
@@ -390,12 +402,12 @@ main(int argc, char**argv)
 		if (FD_ISSET(ctx.sock, &readfds)) {
 			if ((n = recv(ctx.sock, buf, BUFSIZ, 0)) < 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
-		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
+		} else if (FD_ISSET(ctx.fd_in, &readfds) &&
+			   ctx.state == SESSION) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0) {
 				if (send(ctx.sock, buf, n, 0) < 0) goto err;
 			}
-		} else if (sel == 0) {
-			fprintf(stdout, "sending ping to server\n");
+		} else if (sel == 0 && ctx.state == SESSION) {
 			xmpp_ping(&ctx);
 		} else { /* data from FIFO */
 			printf("other event!\n");
