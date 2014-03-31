@@ -30,7 +30,6 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
-#include <expat.h>
 #include <mxml.h>
 
 #include "sasl/sasl.h"
@@ -83,9 +82,9 @@ xmpp_ping(struct context *ctx)
 {
 	char msg[BUFSIZ];
 	int size = snprintf(msg, sizeof msg,
-	    "<iq from='%s@%s/sj' to='%s' id='ping-sj' type='get'>"
+	    "<iq from='%s@%s/%s' to='%s' id='ping-sj' type='get'>"
 		"<ping xmlns='urn:xmpp:ping'/>"
-	    "</iq>", ctx->user, ctx->server, ctx->server);
+	    "</iq>", ctx->user, ctx->server, ctx->resource, ctx->server);
 
 	if ((size = send(ctx->sock, msg, size, 0)) < 0)
 		perror(__func__);
@@ -233,14 +232,13 @@ server_tag(char *tag, void *data)
 		xmpp_session(ctx);
 	}
 
+	/* session completed */
 	if (strcmp("iq", tag_name) == 0 &&
 	    strcmp("sess_1", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
-	    ctx->state == BIND) {
-		fprintf(stderr, "\nTRY TO SESSION:%s\n\n",
-		    mxmlElementGetAttr(tree->child->next->child, "xmlns"));
-		if (tree->child->next->child != NULL &&
-		    strcmp("urn:ietf:params:xml:ns:xmpp-session",
-		    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0)
+	    ctx->state == BIND &&
+	    tree->child->next->child != NULL &&
+	    strcmp("urn:ietf:params:xml:ns:xmpp-session",
+	    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0) {
 		ctx->state = SESSION;
 	}
 
