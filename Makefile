@@ -16,7 +16,7 @@ messaged: messaged.o
 	gcc -o $@ messaged.o
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
-	gcc $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
+	gcc $(CFLAGS) $(CFLAGS_MXML) $(NOWARNING) -c -o $@ sj.c
 
 .c.o:
 	gcc $(CFLAGS) -c -o $@ $<
