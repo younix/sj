@@ -27,7 +27,8 @@ clean:
 	cd sasl; $(MAKE) clean
 
 debug:
-	gdb sj sj.core
+	#gdb sj sj.core
+	gdb messaged messaged.core
 
 update:
 	cd bxml; git pull origin master
