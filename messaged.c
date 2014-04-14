@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 
+#include "bxml/bxml.h"
+
 struct contact {
 	char *name;
 	int fd;
@@ -18,6 +20,9 @@ struct contact {
 };
 
 struct context {
+	int fd_in;
+	int fd_out;
+	struct bxml_ctx *bxml;
 	char *jid;
 	char *id;
 	char *dir;
@@ -25,6 +30,9 @@ struct context {
 };
 
 #define NULL_CONTEXT {	\
+	STDIN_FILENO,	\
+	STDOUT_FILENO,	\
+	NULL,		\
 	NULL,		\
 	NULL,		\
 	NULL,		\
@@ -39,6 +47,21 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 		"<active xmlns='http://jabber.org/protocol/chatstates'/>"
 		"<body>%s</body>"
 	    "</message>", ctx->jid, to, ctx->id, msg);
+}
+
+bool
+send_message(struct context *ctx, struct contact *con)
+{
+	char buf[BUFSIZ];
+	ssize_t size = 0;
+
+	if ((size = read(con->fd, buf, BUFSIZ-1)) < 0)
+		return false;
+
+	buf[size] = '\0';
+	msg_send(ctx, buf, con->name);
+
+	return true;
 }
 
 static bool
@@ -95,8 +118,14 @@ main(int argc, char *argv[])
 	struct context ctx = NULL_CONTEXT;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "j:d:")) != -1) {
+	while ((ch = getopt(argc, argv, "j:d:o:i:")) != -1) {
 		switch (ch) {
+		case 'i':
+			ctx.fd_in = strtol(optarg, NULL, 0);
+			break;
+		case 'o':
+			ctx.fd_out = strtol(optarg, NULL, 0);
+			break;
 		case 'j':
 			ctx.jid = strdup(optarg);
 			break;
@@ -120,7 +149,44 @@ main(int argc, char *argv[])
 	struct stat dstat;
 	stat(ctx.dir, &dstat);
 	build_roster(&ctx);
-	msg_send(&ctx, "test", "younix@jabber.ccc.de");
+	//msg_send(&ctx, "test", "younix@jabber.ccc.de");
+	char buf[BUFSIZ];
+	ssize_t n;
+	int max_fd = 0;
+	fd_set readfds;
+	int sel;
 
-	return EXIT_SUCCESS;
+	for (;;) {
+		FD_ZERO(&readfds);
+		FD_SET(ctx.fd_in, &readfds);
+		max_fd = ctx.fd_in;
+
+		/* add all fd's from in-files to read list*/
+		for (struct contact *c = ctx.roster; c->next != NULL;
+		    c = c->next) {
+			FD_SET(c->fd, &readfds);
+			if (max_fd < c->fd)
+				max_fd = c->fd;
+		}
+
+		/* wait for input */
+		if ((sel = select(max_fd+1, &readfds, NULL, NULL, NULL)) < 0)
+			goto err;
+
+		/* check for input from server */
+		if (FD_ISSET(ctx.fd_in, &readfds)) {
+			if ((n = read(ctx.fd_in, buf, BUFSIZ)) < 0) goto err;
+			bxml_add_buf(ctx.bxml, buf, n);
+			sel--;
+		}
+
+		/* check for input date form in-files */
+		for (struct contact *c = ctx.roster;
+		    c->next != NULL && sel > 0; c = c->next, sel--)
+			if (FD_ISSET(c->fd, &readfds))
+				send_message(&ctx, c);
+	}
+
+ err:
+	return EXIT_FAILURE;
 }

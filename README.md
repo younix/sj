@@ -24,6 +24,7 @@ The program "sj" just do a few things:
   * replace socket-handling with UCSPI
   * add SSL support
   * designing interface for backend programs
+  * replace linked list with one of queue.h
 
 ## required
 
