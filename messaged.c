@@ -49,7 +49,7 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 	    "</message>", ctx->jid, to, ctx->id, msg);
 }
 
-bool
+static bool
 send_message(struct context *ctx, struct contact *con)
 {
 	char buf[BUFSIZ];
@@ -143,7 +143,8 @@ main(int argc, char *argv[])
 	if (ctx.jid == NULL)
 		usage();
 
-	asprintf(&ctx.id, "messaged-%d", getpid());
+	if (asprintf(&ctx.id, "messaged-%d", getpid()) < 0)
+		goto err;
 
 	/* check roster directory */
 	struct stat dstat;
