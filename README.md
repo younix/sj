@@ -34,3 +34,8 @@ The program "sj" just do a few things:
 
  * OpenBSD
  * MacOSX
+
+## plugins
+
+You should be able to write plugins for this client in any language of
+your choice.  The interface are just plain text files.
