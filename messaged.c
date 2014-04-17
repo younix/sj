@@ -1,4 +1,5 @@
 #include <dirent.h>
+#include <err.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
@@ -10,6 +11,8 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#include <mxml.h>
 
 #include "bxml/bxml.h"
 
@@ -64,10 +67,37 @@ send_message(struct context *ctx, struct contact *con)
 	return true;
 }
 
+static void
+recv_message(char *tag, void *data)
+{
+	struct context *ctx = data;
+	/* HACK: we need this, cause mxml can't parse tags by itself */
+	static mxml_node_t *tree = NULL;
+	const char *base = "<?xml ?><stream:stream></stream:stream>";
+
+	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
+	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
+
+	const char *tag_name = mxmlGetElement(tree->child->next);
+	/* authentication and binding */
+	if (strcmp("message", tag_name) != 0) {
+		fprintf(stderr, "recv unknown tag\n");
+		goto err;
+	}
+
+	char *from = mxmlElementGetAttr(tree->child->next, "from");
+	fprintf(stderr, "got message from: %s\n", from);
+
+
+ err:
+	mxmlDelete(tree->child->next);
+}
+
 static bool
 build_roster(struct context *ctx)
 {
-	struct contact *c;
+	struct contact *c = NULL;
+	struct contact *c_old = NULL;
 	char path[_XOPEN_PATH_MAX];
 	int fd;
 	DIR *dirp;
@@ -80,25 +110,26 @@ build_roster(struct context *ctx)
 		goto err;
 
 	while ((dp = readdir(dirp)) != NULL) {
-		fprintf(stderr, "try: %s\n", dp->d_name);
 		if (strcmp(dp->d_name, ".") == 0 ||
 		    strcmp(dp->d_name, "..") == 0 ||
 		    dp->d_type != DT_DIR) continue;
 
+		/* create and open in-files */
 		snprintf(path, sizeof path, "%s/%s/in", ctx->dir, dp->d_name);
 		if (mkfifo(path, S_IRWXU) < 0 && errno != EEXIST) goto err;
 		if ((fd = open(path, O_RDONLY|O_NONBLOCK, 0)) < 0) goto err;
-		if ((c = calloc(1, sizeof *c)) == NULL) goto err;
-		fprintf(stderr, "sizeof: %zd\n", sizeof *c);
 
+		/* add fh and file name to current contact structure */
+		if ((c = calloc(1, sizeof *c)) == NULL) goto err;
 		c->name = strdup(dp->d_name);
 		c->fd = fd;
 		fprintf(stderr, "add: %s\n", c->name);
-		c = c->next;
+		c->next = c_old;
+		c_old = c;
 	}
 
 	closedir(dirp);
-
+	ctx->roster = c; /* save the last one */
 	return true;
  err:
 	perror(__func__);
@@ -146,6 +177,8 @@ main(int argc, char *argv[])
 	if (asprintf(&ctx.id, "messaged-%d", getpid()) < 0)
 		goto err;
 
+	ctx.bxml = bxml_ctx_init(recv_message, &ctx);
+
 	/* check roster directory */
 	struct stat dstat;
 	stat(ctx.dir, &dstat);
@@ -176,6 +209,7 @@ main(int argc, char *argv[])
 
 		/* check for input from server */
 		if (FD_ISSET(ctx.fd_in, &readfds)) {
+			fprintf(stderr, "got data from server!\n");
 			if ((n = read(ctx.fd_in, buf, BUFSIZ)) < 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
 			sel--;

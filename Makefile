@@ -13,10 +13,13 @@ sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 	gcc -o $@ sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o $(LIBS_MXML) -lm
 
 messaged: messaged.o bxml/bxml.o
-	gcc -o $@ messaged.o bxml/bxml.o
+	gcc -o $@ messaged.o bxml/bxml.o $(LIBS_MXML)
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	gcc $(CFLAGS) $(CFLAGS_MXML) $(NOWARNING) -c -o $@ sj.c
+
+messaged.o: messaged.c bxml/bxml.h
+	gcc $(CFLAGS) $(CFLAGS_MXML) -c -o $@ messaged.c
 
 .c.o:
 	gcc $(CFLAGS) -c -o $@ $<
