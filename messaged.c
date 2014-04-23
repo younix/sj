@@ -100,7 +100,7 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 	    "<message from='%s' to='%s' type='chat' id='%s'>"
 		"<active xmlns='http://jabber.org/protocol/chatstates'/>"
 		"<body>%s</body>"
-	    "</message>", ctx->jid, to, ctx->id, msg);
+	    "</message>\n", ctx->jid, to, ctx->id, msg);
 }
 
 static bool
@@ -126,6 +126,8 @@ recv_message(char *tag, void *data)
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
+	const char *tag_name = NULL;
+	const char *node_name = NULL;
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
@@ -135,7 +137,7 @@ recv_message(char *tag, void *data)
 	if (tree->child->next == NULL)
 		err(EXIT_FAILURE, "no tag found");
 
-	const char *tag_name = mxmlGetElement(tree->child->next);
+	if ((tag_name = mxmlGetElement(tree->child->next)) == NULL) goto err;
 	if (strcmp("message", tag_name) != 0) {
 		fprintf(stderr, "recv unknown tag\n");
 		goto err;
@@ -156,18 +158,28 @@ recv_message(char *tag, void *data)
 	}
 
 	if (c == LIST_END(&ctx->roster)) {
-		fprintf(stderr, "got message from known sender\n");
+		fprintf(stderr, "got message from UNKNOWN sender\n");
 		c = add_contact(ctx, from);
 	}
 
+	int space = 0;
 	for (mxml_node_t *node = tree->child->next->child; node->next != NULL;
 	    node = node->next) {
-		fprintf(stderr, "node: %p\n", (void*)node);
-		if (strcmp(mxmlGetElement(node), "body") != 0) continue;
-		fprintf(stderr, "find a body!!\n");
+		if ((node_name = mxmlGetElement(node)) == NULL) continue;
+		if (strcmp(node_name, "body") != 0) continue;
 		if (node->child == NULL) continue;
-		fprintf(stderr, "message: %s\n", mxmlGetText(node->child, 0));
-		break;
+
+		fprintf(stderr, "Message: ");
+		/* this loop shoud be unnecassary, but it isn't */
+		for (mxml_node_t *txt = node->child;
+		    mxmlGetNextSibling(txt) != NULL;
+		    txt = mxmlGetNextSibling(txt)) {
+			const char *t = mxmlGetText(txt, &space);
+			fprintf(stderr, "%s%s",
+			    space == 1 ? " " : "", t);
+		}
+		fprintf(stderr, "\n");
+		break; /* we just look for the first body */
 	}
  err:
 	mxmlDelete(tree->child->next);
