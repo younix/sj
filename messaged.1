@@ -1,0 +1,32 @@
+.Dd $Mdocdate$
+.Dt MESSAGED 1
+.Os
+.Sh NAME
+.Nm messaged
+.Nd handling XMPP message tags
+.Sh SYNOPSIS
+.Nm
+.Op Fl i Ar FD
+.Op Fl o Ar FD
+.Fl j Ar JID
+.Fl r Ar ROSTERDIR
+.Sh DESCRIPTION
+The
+.Nm
+utility processes xmpp message tags from STDIN.
+It has a filesystem based front end like
+.Xr ii 1 .
+.Sh ENVIRONMENT
+.Sh FILES
+.Sh EXIT STATUS
+.Sh EXAMPLES
+.Sh SEE ALSO
+.Xr sj 1 ,
+.Xr ii 1
+.Sh STANDARDS
+XMPP CORE
+.%R RFC 6120 ,
+XMPP IM
+.%R RFC 6121
+.Sh AUTHORS
+Jan Klemkow
