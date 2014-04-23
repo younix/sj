@@ -11,6 +11,7 @@
 
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/queue.h>
 
 #include <mxml.h>
 
@@ -18,8 +19,9 @@
 
 struct contact {
 	char *name;
-	int fd;
-	struct contact *next;
+	int fd;		/* fd to fifo for input */
+	int out;	/* fd to output text file */
+	LIST_ENTRY(contact) next;
 };
 
 struct context {
@@ -29,7 +31,7 @@ struct context {
 	char *jid;
 	char *id;
 	char *dir;
-	struct contact *roster;
+	LIST_HEAD(listhead, contact) roster;
 };
 
 #define NULL_CONTEXT {	\
@@ -39,7 +41,56 @@ struct context {
 	NULL,		\
 	NULL,		\
 	NULL,		\
-	NULL		\
+	LIST_HEAD_INITIALIZER(listhead) \
+}
+
+void
+free_contact(struct contact *c)
+{
+	if (c == NULL) return;
+	if (c->fd != -1) close(c->fd);
+	if (c->out != -1) close(c->out);
+	free(c->name);
+	free(c);
+}
+
+static struct contact *
+add_contact(struct context *ctx, const char *jid)
+{
+	char path[_XOPEN_PATH_MAX];
+	char *slash = NULL;
+	struct contact *c = NULL;
+
+	if ((c = calloc(1, sizeof *c)) == NULL) goto err;
+	c->fd = -1;	/* to detect a none vaild file descriptor */
+	c->out = -1;	/* to detect a none vaild file descriptor */
+	if ((c->name = strdup(jid)) == NULL) goto err;
+
+	/* just handle the bare jabber id without resources */
+	if ((slash = strchr(c->name, '/')) != NULL)
+		*slash = '\0';
+
+	/* prepare the folder */
+	if (snprintf(path, sizeof path, "%s/%s", ctx->dir, c->name) == 0)
+		goto err;
+	if (mkdir(path, S_IRWXU) == -1 && errno != EEXIST) goto err;
+
+	/* prepare an open the "in" file */
+	if (snprintf(path, sizeof path, "%s/%s/in", ctx->dir, c->name) == 0)
+		goto err;
+	if (mkfifo(path, S_IRUSR|S_IWUSR) == -1 && errno != EEXIST) goto err;
+	if ((c->fd = open(path, O_RDONLY|O_NONBLOCK, 0)) == -1) goto err;
+	if ((c->out = open(path, O_WRONLY|O_APPEND|O_CREAT, 0)) == -1) goto err;
+
+	fprintf(stderr, "add: %s\n", c->name);
+	LIST_INSERT_HEAD(&ctx->roster, c, next);
+
+	return c;
+ err:
+	free_contact(c);
+	if (errno != 0)
+		perror(__func__);
+	return NULL;
 }
 
 static void
@@ -71,6 +122,7 @@ static void
 recv_message(char *tag, void *data)
 {
 	struct context *ctx = data;
+	struct contact *c = NULL;
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
@@ -78,17 +130,45 @@ recv_message(char *tag, void *data)
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
 
+	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
+
+	if (tree->child->next == NULL)
+		err(EXIT_FAILURE, "no tag found");
+
 	const char *tag_name = mxmlGetElement(tree->child->next);
-	/* authentication and binding */
 	if (strcmp("message", tag_name) != 0) {
 		fprintf(stderr, "recv unknown tag\n");
 		goto err;
 	}
 
 	char *from = mxmlElementGetAttr(tree->child->next, "from");
+
 	fprintf(stderr, "got message from: %s\n", from);
 
+	if (tree->child->next->child == NULL) goto err;
 
+	/* find contact for this message in roster */
+	LIST_FOREACH(c, &ctx->roster, next) {
+		if (strncmp(c->name, from, strlen(c->name)) == 0) {
+			fprintf(stderr, "got message from known sender\n");
+			break;
+		}
+	}
+
+	if (c == LIST_END(&ctx->roster)) {
+		fprintf(stderr, "got message from known sender\n");
+		c = add_contact(ctx, from);
+	}
+
+	for (mxml_node_t *node = tree->child->next->child; node->next != NULL;
+	    node = node->next) {
+		fprintf(stderr, "node: %p\n", (void*)node);
+		if (strcmp(mxmlGetElement(node), "body") != 0) continue;
+		fprintf(stderr, "find a body!!\n");
+		if (node->child == NULL) continue;
+		fprintf(stderr, "message: %s\n", mxmlGetText(node->child, 0));
+		break;
+	}
  err:
 	mxmlDelete(tree->child->next);
 }
@@ -96,40 +176,21 @@ recv_message(char *tag, void *data)
 static bool
 build_roster(struct context *ctx)
 {
-	struct contact *c = NULL;
-	struct contact *c_old = NULL;
-	char path[_XOPEN_PATH_MAX];
-	int fd;
 	DIR *dirp;
 	struct dirent *dp;
 
-	if (ctx->dir == NULL)
-		return false;
-
-	if ((dirp = opendir(ctx->dir)) == NULL)
-		goto err;
+	if (ctx->dir == NULL) return false;
+	if ((dirp = opendir(ctx->dir)) == NULL) goto err;
 
 	while ((dp = readdir(dirp)) != NULL) {
 		if (strcmp(dp->d_name, ".") == 0 ||
 		    strcmp(dp->d_name, "..") == 0 ||
 		    dp->d_type != DT_DIR) continue;
 
-		/* create and open in-files */
-		snprintf(path, sizeof path, "%s/%s/in", ctx->dir, dp->d_name);
-		if (mkfifo(path, S_IRWXU) < 0 && errno != EEXIST) goto err;
-		if ((fd = open(path, O_RDONLY|O_NONBLOCK, 0)) < 0) goto err;
-
-		/* add fh and file name to current contact structure */
-		if ((c = calloc(1, sizeof *c)) == NULL) goto err;
-		c->name = strdup(dp->d_name);
-		c->fd = fd;
-		fprintf(stderr, "add: %s\n", c->name);
-		c->next = c_old;
-		c_old = c;
+		add_contact(ctx, dp->d_name);
 	}
 
 	closedir(dirp);
-	ctx->roster = c; /* save the last one */
 	return true;
  err:
 	perror(__func__);
@@ -147,6 +208,7 @@ int
 main(int argc, char *argv[])
 {
 	struct context ctx = NULL_CONTEXT;
+	struct contact *c = NULL;
 	int ch;
 
 	while ((ch = getopt(argc, argv, "j:d:o:i:")) != -1) {
@@ -196,8 +258,7 @@ main(int argc, char *argv[])
 		max_fd = ctx.fd_in;
 
 		/* add all fd's from in-files to read list*/
-		for (struct contact *c = ctx.roster; c->next != NULL;
-		    c = c->next) {
+		LIST_FOREACH(c, &ctx.roster, next) {
 			FD_SET(c->fd, &readfds);
 			if (max_fd < c->fd)
 				max_fd = c->fd;
@@ -209,15 +270,13 @@ main(int argc, char *argv[])
 
 		/* check for input from server */
 		if (FD_ISSET(ctx.fd_in, &readfds)) {
-			fprintf(stderr, "got data from server!\n");
 			if ((n = read(ctx.fd_in, buf, BUFSIZ)) < 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
 			sel--;
 		}
 
-		/* check for input date form in-files */
-		for (struct contact *c = ctx.roster;
-		    c->next != NULL && sel > 0; c = c->next, sel--)
+		/* check for input form in-files */
+		LIST_FOREACH(c, &ctx.roster, next)
 			if (FD_ISSET(c->fd, &readfds))
 				send_message(&ctx, c);
 	}
