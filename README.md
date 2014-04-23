@@ -25,6 +25,7 @@ The program "sj" just do a few things:
   * add SSL support
   * designing interface for backend programs
   * replace linked list with one of queue.h
+  * write manpages for all tools
 
 ## required
 
