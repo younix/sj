@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 700
+#define _GNU_SOURCE
+
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>

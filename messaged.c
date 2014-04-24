@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 700
+#define _BSD_SOURCE
+
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -73,7 +76,7 @@ free_contact(struct contact *c)
 static struct contact *
 add_contact(struct context *ctx, const char *jid)
 {
-	char path[_XOPEN_PATH_MAX];
+	char path[PATH_MAX];
 	char *slash = NULL;
 	struct contact *c = NULL;
 
