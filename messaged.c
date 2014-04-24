@@ -34,14 +34,14 @@ struct context {
 	LIST_HEAD(listhead, contact) roster;
 };
 
-#define NULL_CONTEXT {	\
-	STDIN_FILENO,	\
-	STDOUT_FILENO,	\
-	NULL,		\
-	NULL,		\
-	NULL,		\
-	NULL,		\
-	LIST_HEAD_INITIALIZER(listhead) \
+#define NULL_CONTEXT {		\
+	STDIN_FILENO,		\
+	STDOUT_FILENO,		\
+	NULL,			\
+	NULL,			\
+	NULL,			\
+	NULL,			\
+	LIST_HEAD_INITIALIZER() \
 }
 
 void
@@ -243,23 +243,16 @@ main(int argc, char *argv[])
 	if (ctx.jid == NULL)
 		usage();
 
-	if (asprintf(&ctx.id, "messaged-%d", getpid()) < 0)
-		goto err;
-
+	if (asprintf(&ctx.id, "messaged-%d", getpid()) < 0) goto err;
 	ctx.bxml = bxml_ctx_init(recv_message, &ctx);
 
 	/* check roster directory */
-	struct stat dstat;
-	stat(ctx.dir, &dstat);
 	build_roster(&ctx);
-	//msg_send(&ctx, "test", "younix@jabber.ccc.de");
-	char buf[BUFSIZ];
-	ssize_t n;
-	int max_fd = 0;
-	fd_set readfds;
-	int sel;
 
 	for (;;) {
+		int sel, max_fd = 0;
+		ssize_t n;
+		fd_set readfds;
 		FD_ZERO(&readfds);
 		FD_SET(ctx.fd_in, &readfds);
 		max_fd = ctx.fd_in;
@@ -277,6 +270,7 @@ main(int argc, char *argv[])
 
 		/* check for input from server */
 		if (FD_ISSET(ctx.fd_in, &readfds)) {
+			char buf[BUFSIZ];
 			if ((n = read(ctx.fd_in, buf, BUFSIZ)) < 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
 			sel--;
