@@ -61,6 +61,10 @@ struct context {
 
 	/* state of the xmpp session */
 	enum xmpp_state state;
+
+	/* frontend daemon */
+	int fd_msg;
+	int fd_iq;
 };
 
 #define NULL_CONTEXT {				\
@@ -76,7 +80,9 @@ struct context {
 	NULL,	/* char *dir; */		\
 	0,	/* int fd_out; */		\
 	0,	/* int fd_in; */		\
-	OPEN	/* int state; */		\
+	OPEN,	/* int state; */		\
+	-1,	/* int fd_msg; */		\
+	-1	/* int fd_iq; */		\
 }
 
 static void
@@ -227,6 +233,15 @@ server_tag(char *tag, void *data)
 			printf("state: %d\n", ctx->state);
 	}
 
+	/* SASL authentification successful */
+	if (strcmp("success", tag_name) == 0 &&
+	    strcmp("urn:ietf:params:xml:ns:xmpp-sasl",
+		   mxmlElementGetAttr(tree->child->next, "xmlns")) == 0) {
+		ctx->state = AUTH;
+		ctx->bxml->depth = 0; /* The stream will reset after success */
+		xmpp_init(ctx);
+	}
+
 	/* binding completed */
 	if (strcmp("iq", tag_name) == 0 &&
 	    strcmp("bind_2", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
@@ -243,15 +258,6 @@ server_tag(char *tag, void *data)
 	    strcmp("urn:ietf:params:xml:ns:xmpp-session",
 	    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0) {
 		ctx->state = SESSION;
-	}
-
-	/* SASL authentification successful */
-	if (strcmp("success", tag_name) == 0 &&
-	    strcmp("urn:ietf:params:xml:ns:xmpp-sasl",
-		   mxmlElementGetAttr(tree->child->next, "xmlns")) == 0) {
-		ctx->state = AUTH;
-		ctx->bxml->depth = 0; /* The stream will reset after success */
-		xmpp_init(ctx);
 	}
 
 	mxmlDelete(tree->child->next);
