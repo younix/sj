@@ -62,8 +62,7 @@ add_contact(struct context *ctx, const char *jid)
 	struct contact *c = NULL;
 
 	if ((c = calloc(1, sizeof *c)) == NULL) goto err;
-	c->fd = -1;	/* to detect a none vaild file descriptor */
-	c->out = -1;	/* to detect a none vaild file descriptor */
+	c->out = c->fd = -1;	/* to detect a none vaild file descriptor */
 	if ((c->name = strdup(jid)) == NULL) goto err;
 
 	/* just handle the bare jabber id without resources */
@@ -75,12 +74,17 @@ add_contact(struct context *ctx, const char *jid)
 		goto err;
 	if (mkdir(path, S_IRWXU) == -1 && errno != EEXIST) goto err;
 
-	/* prepare an open the "in" file */
+	/* prepare and open the "in" file */
 	if (snprintf(path, sizeof path, "%s/%s/in", ctx->dir, c->name) == 0)
 		goto err;
 	if (mkfifo(path, S_IRUSR|S_IWUSR) == -1 && errno != EEXIST) goto err;
 	if ((c->fd = open(path, O_RDONLY|O_NONBLOCK, 0)) == -1) goto err;
-	if ((c->out = open(path, O_WRONLY|O_APPEND|O_CREAT, 0)) == -1) goto err;
+
+	/* prepare and open the "out" file */
+	if (snprintf(path, sizeof path, "%s/%s/out", ctx->dir, c->name) == 0)
+		goto err;
+	if ((c->out = open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR))
+	    == -1) goto err;
 
 	fprintf(stderr, "add: %s\n", c->name);
 	LIST_INSERT_HEAD(&ctx->roster, c, next);
@@ -128,60 +132,51 @@ recv_message(char *tag, void *data)
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
 	const char *node_name = NULL;
+	const char *from = NULL;
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
-	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
-
+	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
 
-	if (tree->child->next == NULL)
-		err(EXIT_FAILURE, "no tag found");
-
+	if (tree->child->next == NULL) goto err;
 	if ((tag_name = mxmlGetElement(tree->child->next)) == NULL) goto err;
-	if (strcmp("message", tag_name) != 0) {
-		fprintf(stderr, "recv unknown tag\n");
+	if (strcmp("message", tag_name) != 0)
 		goto err;
-	}
 
-	char *from = mxmlElementGetAttr(tree->child->next, "from");
+	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
+		goto err;
 
-	fprintf(stderr, "got message from: %s\n", from);
+	/* try to find contact for this message in roster */
+	LIST_FOREACH(c, &ctx->roster, next)
+		if (strncmp(c->name, from, strlen(c->name)) == 0)
+			break;
+
+	/* if message comes from an unknown JID, create a contact */
+	if (c == LIST_END(&ctx->roster))
+		c = add_contact(ctx, from);
 
 	if (tree->child->next->child == NULL) goto err;
-
-	/* find contact for this message in roster */
-	LIST_FOREACH(c, &ctx->roster, next) {
-		if (strncmp(c->name, from, strlen(c->name)) == 0) {
-			fprintf(stderr, "got message from known sender\n");
-			break;
-		}
-	}
-
-	if (c == LIST_END(&ctx->roster)) {
-		fprintf(stderr, "got message from UNKNOWN sender\n");
-		c = add_contact(ctx, from);
-	}
-
-	int space = 0;
 	for (mxml_node_t *node = tree->child->next->child; node->next != NULL;
 	    node = node->next) {
 		if ((node_name = mxmlGetElement(node)) == NULL) continue;
 		if (strcmp(node_name, "body") != 0) continue;
 		if (node->child == NULL) continue;
 
-		fprintf(stderr, "Message: ");
-		/* this loop shoud be unnecassary, but it isn't */
-		for (mxml_node_t *txt = node->child;
-		    mxmlGetNextSibling(txt) != NULL;
+		/* concatinate all text peaces */
+		for (mxml_node_t *txt = node->child; txt != NULL;
 		    txt = mxmlGetNextSibling(txt)) {
+			int space = 0;
 			const char *t = mxmlGetText(txt, &space);
-			fprintf(stderr, "%s%s",
-			    space == 1 ? " " : "", t);
+			if (space == 1)
+				write(c->out, " ", 1);
+			if (write(c->out, t, strlen(t)) == -1) goto err;
 		}
-		fprintf(stderr, "\n");
-		break; /* we just look for the first body */
+		write(c->out, "\n", 1);
+		break;	/* we just look for the first body at the moment */
 	}
  err:
+	if (errno != 0)
+		perror(__func__);
 	mxmlDelete(tree->child->next);
 }
 
