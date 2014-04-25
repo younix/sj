@@ -226,7 +226,7 @@ build_roster(struct context *ctx)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: messaged -j JID -r ROSTERDIR\n");
+	fprintf(stderr, "usage: messaged -j JID -d DIR\n");
 	exit(EXIT_FAILURE);
 }
 
