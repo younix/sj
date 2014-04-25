@@ -15,5 +15,6 @@
 *.exe
 *.out
 *.app
+*.swp
 
 example
