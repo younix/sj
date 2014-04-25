@@ -26,10 +26,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <sys/types.h>
+#include <sys/select.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
