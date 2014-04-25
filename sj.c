@@ -18,6 +18,7 @@
 #define _GNU_SOURCE
 #define _BSD_SOURCE
 
+#include <assert.h>
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -228,6 +229,19 @@ start_message_proccess(struct context *ctx)
 	return false;
 }
 
+static bool
+has_attr(mxml_node_t *node, const char *attr, const char *value)
+{
+	const char *v = NULL;
+	if (node == NULL || attr == NULL || value == NULL)
+		return false;
+
+	if ((v = mxmlElementGetAttr(node, attr)) == NULL)
+		return false;
+
+	return strcmp(v, value) == 0 ? true : false;
+}
+
 /*
  * This callback function is called from bxml-lib if a whole xml-tag from
  * the xmpp-server is recieved.
@@ -236,21 +250,23 @@ static void
 server_tag(char *tag, void *data)
 {
 	struct context *ctx = data;
+	static mxml_node_t *node = NULL;
+	static mxml_node_t *sub_node = NULL;
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 
-	fprintf(stderr, "SERVER: %s\n\n", tag);
-
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
-	if (tree == NULL) err(EXIT_FAILURE, "no tree found");
-
+	assert(tree != NULL);
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
+	/* End of HACK */
 
-	if (tree->child->next == NULL)
-		err(EXIT_FAILURE, "no tree found");
+	if ((node = tree->child->next) == NULL)
+		err(EXIT_FAILURE, "no node found");
+	sub_node = node->child;
 
-	const char *tag_name = mxmlGetElement(tree->child->next);
+	const char *tag_name = mxmlGetElement(node);
+	if (tag_name == NULL) goto err;
 
 	/* authentication and binding */
 	if (strcmp("stream:features", tag_name) == 0) {
@@ -259,45 +275,51 @@ server_tag(char *tag, void *data)
 		else if (ctx->state == AUTH)
 			xmpp_bind(ctx);
 		else
-			printf("state: %d\n", ctx->state);
+			assert(true);
+		goto out;
 	}
 
 	/* SASL authentification successful */
 	if (strcmp("success", tag_name) == 0 &&
-	    strcmp("urn:ietf:params:xml:ns:xmpp-sasl",
-		   mxmlElementGetAttr(tree->child->next, "xmlns")) == 0) {
+	    has_attr(node, "xmlns", "urn:ietf:params:xml:ns:xmpp-sasl")) {
 		ctx->state = AUTH;
 		ctx->bxml->depth = 0; /* The stream will reset after success */
 		xmpp_init(ctx);
+		goto out;
 	}
 
 	/* binding completed */
-	if (ctx->state == BIND_OUT &&
-	    strcmp("iq", tag_name) == 0 &&
-	    strcmp("bind_2", mxmlElementGetAttr(tree->child->next, "id")) == 0){
+	if (ctx->state == BIND_OUT && strcmp("iq", tag_name) == 0 &&
+	    has_attr(node, "id", "bind_2")) {
 		ctx->state = BIND;
 		xmpp_session(ctx);
+		goto out;
 	}
 
 	/* session completed */
-	if (ctx->state == BIND &&
-	    strcmp("iq", tag_name) == 0 &&
-	    strcmp("sess_1", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
-	    tree->child->next->child != NULL &&
-	    strcmp("urn:ietf:params:xml:ns:xmpp-session",
-	    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0) {
+	if (ctx->state == BIND && strcmp("iq", tag_name) == 0 &&
+	    has_attr(node, "id", "sess_1") &&
+	    has_attr(sub_node, "xmlns", "urn:ietf:params:xml:ns:xmpp-session")){
 		ctx->state = SESSION;
-		start_message_proccess(ctx);
+		start_message_proccess(ctx);	
+		/* HACK: we need real presence handling here! */
 		xmpp_message(ctx, "younix@jabber.ccc.de", "test");
-		fprintf(stderr, "session was started!!!!\n");
+		goto out;
 	}
 
+	/* send message tags to message process */
 	if (ctx->fd_msg_in != -1 && strcmp("message", tag_name) == 0)
 		if (write(ctx->fd_msg_in, tag, strlen(tag)) == -1) goto err;
 
+	/* filter out return of ping */
+	if (strcmp("iq", tag_name) == 0 &&
+	    has_attr(node, "id", ctx->id) &&
+	    has_attr(node, "type", "result") == 0)
+		goto out;
  err:
 	if (errno != 0)
 		perror(__func__);
+ out:
 	mxmlDelete(tree->child->next);
 }
 
