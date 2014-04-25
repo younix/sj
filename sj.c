@@ -446,19 +446,16 @@ main(int argc, char**argv)
 	init_dir(&ctx);
 	xmpp_init(&ctx);
 
-	int max_fd = ctx.sock;
-	char buf[BUFSIZ];
-	ssize_t n = 0;
-	fd_set readfds;
-
-	/* timeinterval for keep alive pings */
-	struct timeval tv = {10, 0};
-
 	for (;;) {
+		char buf[BUFSIZ];
+		ssize_t n = 0;
+		struct timeval tv = {10, 0}; /* interval for keep alive pings */
+		fd_set readfds;
+
 		FD_ZERO(&readfds);
 		FD_SET(ctx.sock, &readfds);
 		FD_SET(ctx.fd_in, &readfds);
-		max_fd = MAX(ctx.sock, ctx.fd_in);
+		int max_fd = MAX(ctx.sock, ctx.fd_in);
 
 		if (ctx.fd_msg_in != -1) {
 			FD_SET(ctx.fd_msg_in, &readfds);
