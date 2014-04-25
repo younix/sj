@@ -38,6 +38,10 @@
 #include "sasl/sasl.h"
 #include "bxml/bxml.h"
 
+#ifndef MAX
+#define MAX(a, b) ((a) < (b) ? (b) : (a))
+#endif
+
 /* XMPP session states */
 enum xmpp_state {OPEN, AUTH, BIND_OUT, BIND, SESSION};
 
@@ -66,8 +70,8 @@ struct context {
 	enum xmpp_state state;
 
 	/* frontend daemon */
-	int fd_msg;
-	int fd_iq;
+	int fd_msg_in;
+	int fd_msg_out;
 };
 
 #define NULL_CONTEXT {				\
@@ -100,6 +104,8 @@ xmpp_ping(struct context *ctx)
 
 	if ((size = send(ctx->sock, msg, size, 0)) < 0)
 		perror(__func__);
+
+	fprintf(stderr, "sending ping to server!\n");
 }
 
 static void
@@ -202,6 +208,45 @@ xmpp_message(struct context *ctx, char *to, char *text) {
 	if (send(ctx->sock, "</body></message>", 17, 0) < 0) perror(__func__);
 }
 
+static bool
+start_message_proccess(struct context *ctx)
+{
+	char jid[BUFSIZ];
+#	define PIPE_READ  0
+#	define PIPE_WRITE 1
+	int pi[2];
+	int po[2];
+
+	if (pipe(pi) == -1) goto err;
+	if (pipe(po) == -1) goto err;
+
+	switch (fork()) {
+	case 0:
+		/* message tag process */
+		if (dup2(pi[PIPE_WRITE], STDOUT_FILENO) == -1) goto err;
+		if (dup2(po[PIPE_READ], STDIN_FILENO) == -1) goto err;
+		if (close(pi[PIPE_READ]) == -1) goto err;
+		if (close(po[PIPE_WRITE]) == -1) goto err;
+
+		snprintf(jid, sizeof jid, "%s@%s", ctx->user, ctx->server);
+		execl("messaged", "messaged", "-j", jid, "-d", ctx->dir, NULL);
+		err(EXIT_FAILURE, "%s: execl", __func__);
+	case -1:
+		goto err;
+	}
+
+	ctx->fd_msg_in = pi[PIPE_READ];
+	ctx->fd_msg_out = po[PIPE_WRITE];
+	if (close(pi[PIPE_WRITE]) == -1) goto err;
+	if (close(po[PIPE_READ]) == -1) goto err;
+
+	return true;
+ err:
+	if (errno != 0)
+		perror(__func__);
+	return false;
+}
+
 /*
  * This callback function is called from bxml-lib if a whole xml-tag from
  * the xmpp-server is recieved.
@@ -224,7 +269,7 @@ server_tag(char *tag, void *data)
 	if (tree->child->next == NULL)
 		err(EXIT_FAILURE, "no tree found");
 
- 	const char *tag_name = mxmlGetElement(tree->child->next);
+	const char *tag_name = mxmlGetElement(tree->child->next);
 
 	/* authentication and binding */
 	if (strcmp("stream:features", tag_name) == 0) {
@@ -246,21 +291,23 @@ server_tag(char *tag, void *data)
 	}
 
 	/* binding completed */
-	if (strcmp("iq", tag_name) == 0 &&
-	    strcmp("bind_2", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
-	    ctx->state == BIND_OUT) {
+	if (ctx->state == BIND_OUT &&
+	    strcmp("iq", tag_name) == 0 &&
+	    strcmp("bind_2", mxmlElementGetAttr(tree->child->next, "id")) == 0){
 		ctx->state = BIND;
 		xmpp_session(ctx);
 	}
 
 	/* session completed */
-	if (strcmp("iq", tag_name) == 0 &&
+	if (ctx->state == BIND &&
+	    strcmp("iq", tag_name) == 0 &&
 	    strcmp("sess_1", mxmlElementGetAttr(tree->child->next, "id")) == 0&&
-	    ctx->state == BIND &&
 	    tree->child->next->child != NULL &&
 	    strcmp("urn:ietf:params:xml:ns:xmpp-session",
 	    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0) {
 		ctx->state = SESSION;
+		start_message_proccess(ctx);
+		fprintf(stderr, "session was started!!!!\n");
 	}
 
 	mxmlDelete(tree->child->next);
@@ -405,10 +452,12 @@ main(int argc, char**argv)
 		FD_ZERO(&readfds);
 		FD_SET(ctx.sock, &readfds);
 		FD_SET(ctx.fd_in, &readfds);
+		max_fd = MAX(ctx.sock, ctx.fd_in);
 
-		max_fd = ctx.sock;
-		if (max_fd < ctx.fd_in)
-			max_fd = ctx.fd_in;
+		if (ctx.fd_msg_in != -1) {
+			FD_SET(ctx.fd_msg_in, &readfds);
+			max_fd = MAX(max_fd, ctx.fd_msg_in);
+		}
 
 		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
 
@@ -419,6 +468,10 @@ main(int argc, char**argv)
 		} else if (FD_ISSET(ctx.fd_in, &readfds) &&
 			   ctx.state == SESSION) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0) {
+				if (send(ctx.sock, buf, n, 0) < 0) goto err;
+			}
+		} else if (FD_ISSET(ctx.fd_msg_in, &readfds)) {
+			while ((n = read(ctx.fd_msg_in, buf, BUFSIZ)) > 0) {
 				if (send(ctx.sock, buf, n, 0) < 0) goto err;
 			}
 		} else if (sel == 0 && ctx.state == SESSION) {
