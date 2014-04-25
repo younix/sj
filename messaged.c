@@ -59,7 +59,7 @@ struct context {
 	NULL,			\
 	NULL,			\
 	NULL,			\
-	NULL,			\
+	".",			\
 	LIST_HEAD_INITIALIZER() \
 }
 
