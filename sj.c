@@ -106,8 +106,6 @@ xmpp_ping(struct context *ctx)
 
 	if ((size = send(ctx->sock, msg, size, 0)) < 0)
 		perror(__func__);
-
-	fprintf(stderr, "sending ping to server!\n");
 }
 
 static void
@@ -309,27 +307,23 @@ server_tag(char *tag, void *data)
 static void
 init_dir(struct context *ctx)
 {
-	if (mkdir(ctx->dir, S_IRWXU) < 0)
-		if (errno != EEXIST)
-			perror(__func__);
+	char file[PATH_MAX];
 
-	char *file = NULL;
-	asprintf(&file, "%s/out", ctx->dir);
+	if (mkdir(ctx->dir, S_IRWXU) < 0 && errno != EEXIST) goto err;
+	snprintf(file, sizeof file, "%s/out", ctx->dir);
 	if ((ctx->fd_out = open(file, O_WRONLY|O_CREAT|O_TRUNC,
-	    S_IRUSR|S_IWUSR)) < 0) {
-		fprintf(stderr, "open_error:");
-		perror(__func__);
-	}
-	free(file);
+	    S_IRUSR|S_IWUSR)) < 0) goto err;
 
-	asprintf(&file, "%s/in", ctx->dir);
-	if (mkfifo(file, S_IRUSR|S_IWUSR) < 0)
-		if (errno != EEXIST)
-			perror(__func__);
+	snprintf(file, sizeof file, "%s/in", ctx->dir);
+	if (mkfifo(file, S_IRUSR|S_IWUSR) < 0 && errno != EEXIST) goto err;
+	if ((ctx->fd_in = open(file, O_RDONLY|O_NONBLOCK, 0)) < 0) goto err;
 
-	if ((ctx->fd_in = open(file, O_RDONLY|O_NONBLOCK, 0)) < 0)
-		perror(__func__);
-	free(file);
+	if (errno == EEXIST)
+		errno = 0;
+
+	return;
+ err:
+	perror(__func__);
 }
 
 static void
