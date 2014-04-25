@@ -143,18 +143,6 @@ xmpp_bind(struct context *ctx)
 }
 
 static void
-xmpp_auth_type(struct context *ctx, char *type)
-{
-	char msg[BUFSIZ];
-	int size = snprintf(msg, sizeof msg,
-		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
-		" mechanism='%s'/>", type);
-
-	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
-		perror(__func__);
-}
-
-static void
 xmpp_auth(struct context *ctx)
 {
 	char msg[BUFSIZ];
@@ -184,13 +172,6 @@ xmpp_init(struct context *ctx)
 	    ctx->user, ctx->server, ctx->server);
 
 	if (send(ctx->sock, msg, size, 0) < 0)
-		perror(__func__);
-}
-
-static void
-xmpp_close(int sock)
-{
-	if (send(sock, "</stream:stream>", 16, 0) < 0)
 		perror(__func__);
 }
 
@@ -309,9 +290,16 @@ server_tag(char *tag, void *data)
 	    mxmlElementGetAttr(tree->child->next->child, "xmlns")) == 0) {
 		ctx->state = SESSION;
 		start_message_proccess(ctx);
+		xmpp_message(ctx, "younix@jabber.ccc.de", "test");
 		fprintf(stderr, "session was started!!!!\n");
 	}
 
+	if (ctx->fd_msg_in != -1 && strcmp("message", tag_name) == 0)
+		if (write(ctx->fd_msg_in, tag, strlen(tag)) == -1) goto err;
+
+ err:
+	if (errno != 0)
+		perror(__func__);
 	mxmlDelete(tree->child->next);
 }
 

@@ -1,6 +1,5 @@
 CC ?= cc
 CFLAGS := -std=c99 -pedantic -Wall -Wextra -O3 -g
-#NOWARNING=-Wno-unused
 CFLAGS_MXML := `pkg-config --cflags mxml`
 LIBS_MXML := `pkg-config --libs mxml`
 
@@ -18,7 +17,7 @@ messaged: messaged.o bxml/bxml.o
 	$(CC) -o $@ $(LIBS_MXML) messaged.o bxml/bxml.o
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
-	$(CC) $(CFLAGS) $(CFLAGS_MXML) $(NOWARNING) -c -o $@ sj.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
 
 messaged.o: messaged.c bxml/bxml.h
 	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ messaged.c
