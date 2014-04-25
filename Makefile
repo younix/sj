@@ -1,7 +1,8 @@
-CFLAGS=-std=c99 -pedantic -Wall -Wextra -O3 -g
-NOWARNING=-Wno-unused
-CFLAGS_MXML=`pkg-config --cflags mxml`
-LIBS_MXML=`pkg-config --libs mxml`
+CC ?= cc
+CFLAGS := -std=c99 -pedantic -Wall -Wextra -O3 -g
+#NOWARNING=-Wno-unused
+CFLAGS_MXML := `pkg-config --cflags mxml`
+LIBS_MXML := `pkg-config --libs mxml`
 
 .PHONY: all test clean debug update
 .SUFFIXES: .o .c
@@ -10,19 +11,20 @@ BINS=sj messaged
 
 all: $(BINS)
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
-	cc -o $@ sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o $(LIBS_MXML) -lm
+	$(CC) -o $@ $(LIBS_MXML) -lm \
+	    sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 
 messaged: messaged.o bxml/bxml.o
-	cc -o $@ messaged.o bxml/bxml.o $(LIBS_MXML)
+	$(CC) -o $@ $(LIBS_MXML) messaged.o bxml/bxml.o
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
-	cc $(CFLAGS) $(CFLAGS_MXML) $(NOWARNING) -c -o $@ sj.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) $(NOWARNING) -c -o $@ sj.c
 
 messaged.o: messaged.c bxml/bxml.h
-	cc $(CFLAGS) $(CFLAGS_MXML) -c -o $@ messaged.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ messaged.c
 
 .c.o:
-	cc $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(BINS) *.o *.core expat
