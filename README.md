@@ -31,10 +31,19 @@ The program "sj" just do a few things:
 
   * mini-xml-lib
 
-## tested on
+## tested with
 
  * OpenBSD
  * MacOSX
+ * gcc 4.2.1
+ * gcc 4.8.2
+ * clang 3.5
+
+## build
+
+ * git checkout
+ * git submodules checkout
+ * make [CC=...]
 
 ## plugins
 
