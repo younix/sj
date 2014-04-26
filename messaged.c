@@ -108,6 +108,7 @@ add_contact(struct context *ctx, const char *jid)
 	fprintf(stderr, "add: %s\n", c->name);
 	LIST_INSERT_HEAD(&ctx->roster, c, next);
 
+	errno = 0;
 	return c;
  err:
 	free_contact(c);
@@ -219,7 +220,8 @@ build_roster(struct context *ctx)
 	closedir(dirp);
 	return true;
  err:
-	perror(__func__);
+	if (errno != 0)
+		perror(__func__);
 	return false;
 }
 
