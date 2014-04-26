@@ -26,6 +26,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <unistd.h>
 
 #include <sys/stat.h>
@@ -150,8 +151,9 @@ recv_message(char *tag, void *data)
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
-	const char *node_name = NULL;
 	const char *from = NULL;
+	char prompt[BUFSIZ];
+	time_t timestamp = time(NULL);
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
@@ -165,6 +167,11 @@ recv_message(char *tag, void *data)
 	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
 		goto err;
 
+	/* prepare prompt "YYYY-MM-DD HH:MM <FROM> " */
+	strftime(prompt, sizeof prompt, "%F %R <", localtime(&timestamp));
+	strlcat(prompt, from, sizeof prompt);
+	strlcat(prompt, "> ", sizeof prompt);
+
 	/* try to find contact for this message in roster */
 	LIST_FOREACH(c, &ctx->roster, next)
 		if (strncmp(c->name, from, strlen(c->name)) == 0)
@@ -177,10 +184,11 @@ recv_message(char *tag, void *data)
 	if (tree->child->next->child == NULL) goto err;
 	for (mxml_node_t *node = tree->child->next->child; node != NULL;
 	    node = node->next) {
-		if ((node_name = mxmlGetElement(node)) == NULL) continue;
-		if (strcmp(node_name, "body") != 0) continue;
+		if ((tag_name = mxmlGetElement(node)) == NULL) continue;
+		if (strcmp(tag_name, "body") != 0) continue;
 		if (node->child == NULL) continue;
 
+		write(c->out, prompt, strlen(prompt));
 		/* concatinate all text peaces */
 		for (mxml_node_t *txt = node->child; txt != NULL;
 		    txt = mxmlGetNextSibling(txt)) {
