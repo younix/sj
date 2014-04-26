@@ -302,5 +302,7 @@ main(int argc, char *argv[])
 	}
 
  err:
+	if (errno != 0)
+		perror(NULL);
 	return EXIT_FAILURE;
 }

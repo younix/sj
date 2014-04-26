@@ -208,6 +208,8 @@ start_message_proccess(struct context *ctx)
 		if (dup2(pi[PIPE_WRITE], STDOUT_FILENO) == -1) goto err;
 		if (dup2(po[PIPE_READ], STDIN_FILENO) == -1) goto err;
 		if (close(pi[PIPE_READ]) == -1) goto err;
+		if (close(pi[PIPE_WRITE]) == -1) goto err;
+		if (close(po[PIPE_READ]) == -1) goto err;
 		if (close(po[PIPE_WRITE]) == -1) goto err;
 
 		snprintf(jid, sizeof jid, "%s@%s", ctx->user, ctx->server);
@@ -308,8 +310,8 @@ server_tag(char *tag, void *data)
 	}
 
 	/* send message tags to message process */
-	if (ctx->fd_msg_in != -1 && strcmp("message", tag_name) == 0)
-		if (write(ctx->fd_msg_in, tag, strlen(tag)) == -1) goto err;
+	if (ctx->fd_msg_out != -1 && strcmp("message", tag_name) == 0)
+		if (write(ctx->fd_msg_out, tag, strlen(tag)) == -1) goto err;
 
 	/* filter out return of ping */
 	if (strcmp("iq", tag_name) == 0 &&
