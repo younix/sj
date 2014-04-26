@@ -309,15 +309,17 @@ server_tag(char *tag, void *data)
 		goto out;
 	}
 
-	/* send message tags to message process */
-	if (ctx->fd_msg_out != -1 && strcmp("message", tag_name) == 0)
-		if (write(ctx->fd_msg_out, tag, strlen(tag)) == -1) goto err;
-
 	/* filter out return of ping */
 	if (strcmp("iq", tag_name) == 0 &&
 	    has_attr(node, "id", ctx->id) &&
-	    has_attr(node, "type", "result") == 0)
+	    has_attr(node, "type", "result"))
 		goto out;
+
+	fprintf(stderr, "TAG: %s\n\n", tag);
+
+	/* send message tags to message process */
+	if (ctx->fd_msg_out != -1 && strcmp("message", tag_name) == 0)
+		if (write(ctx->fd_msg_out, tag, strlen(tag)) == -1) goto err;
  err:
 	if (errno != 0)
 		perror(__func__);

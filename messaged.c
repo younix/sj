@@ -105,7 +105,6 @@ add_contact(struct context *ctx, const char *jid)
 	if ((c->out = open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR))
 	    == -1) goto err;
 
-	fprintf(stderr, "add: %s\n", c->name);
 	LIST_INSERT_HEAD(&ctx->roster, c, next);
 
 	errno = 0;
@@ -176,7 +175,7 @@ recv_message(char *tag, void *data)
 		c = add_contact(ctx, from);
 
 	if (tree->child->next->child == NULL) goto err;
-	for (mxml_node_t *node = tree->child->next->child; node->next != NULL;
+	for (mxml_node_t *node = tree->child->next->child; node != NULL;
 	    node = node->next) {
 		if ((node_name = mxmlGetElement(node)) == NULL) continue;
 		if (strcmp(node_name, "body") != 0) continue;
