@@ -277,6 +277,7 @@ main(int argc, char *argv[])
 	/* check roster directory */
 	build_roster(&ctx);
 
+	setlinebuf(stdout);
 	for (;;) {
 		int sel, max_fd = 0;
 		ssize_t n;

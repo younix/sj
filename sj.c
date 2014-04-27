@@ -88,11 +88,11 @@ struct context {
 	NULL,	/* char *resource; */		\
 	NULL,	/* char *id; */			\
 	NULL,	/* char *dir; */		\
-	0,	/* int fd_out; */		\
-	0,	/* int fd_in; */		\
+	-1,	/* int fd_out; */		\
+	-1,	/* int fd_in; */		\
 	OPEN,	/* int state; */		\
-	-1,	/* int fd_msg; */		\
-	-1	/* int fd_iq; */		\
+	-1,	/* int fd_msg_in; */		\
+	-1	/* int fd_msg_out; */		\
 }
 
 static void
@@ -196,21 +196,23 @@ start_message_proccess(struct context *ctx)
 	char jid[BUFSIZ];
 #	define PIPE_READ  0
 #	define PIPE_WRITE 1
-	int pi[2];
-	int po[2];
+	int pi[2];	/* pipe intput */
+	int po[2];	/* pipe output */
 
 	if (pipe(pi) == -1) goto err;
 	if (pipe(po) == -1) goto err;
 
 	switch (fork()) {
-	case 0:
-		/* message tag process */
+	case 0:	/* message handling process */
+		/* don't need these ends of the pipes here */
+		if (close(pi[PIPE_READ]) == -1) goto err;
+		if (close(po[PIPE_WRITE]) == -1) goto err;
+
 		if (dup2(pi[PIPE_WRITE], STDOUT_FILENO) == -1) goto err;
 		if (dup2(po[PIPE_READ], STDIN_FILENO) == -1) goto err;
-		if (close(pi[PIPE_READ]) == -1) goto err;
+
 		if (close(pi[PIPE_WRITE]) == -1) goto err;
 		if (close(po[PIPE_READ]) == -1) goto err;
-		if (close(po[PIPE_WRITE]) == -1) goto err;
 
 		snprintf(jid, sizeof jid, "%s@%s", ctx->user, ctx->server);
 		execl("messaged", "messaged", "-j", jid, "-d", ctx->dir, NULL);
@@ -219,10 +221,12 @@ start_message_proccess(struct context *ctx)
 		goto err;
 	}
 
-	ctx->fd_msg_in = pi[PIPE_READ];
-	ctx->fd_msg_out = po[PIPE_WRITE];
+	/* don't need these ends of the pipes here */
 	if (close(pi[PIPE_WRITE]) == -1) goto err;
 	if (close(po[PIPE_READ]) == -1) goto err;
+
+	ctx->fd_msg_in = pi[PIPE_READ];
+	ctx->fd_msg_out = po[PIPE_WRITE];
 
 	return true;
  err:
@@ -314,8 +318,6 @@ server_tag(char *tag, void *data)
 	    has_attr(node, "id", ctx->id) &&
 	    has_attr(node, "type", "result"))
 		goto out;
-
-	fprintf(stderr, "TAG: %s\n\n", tag);
 
 	/* send message tags to message process */
 	if (ctx->fd_msg_out != -1 && strcmp("message", tag_name) == 0)
@@ -474,13 +476,11 @@ main(int argc, char**argv)
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds) &&
 			   ctx.state == SESSION) {
-			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0) {
+			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
 				if (send(ctx.sock, buf, n, 0) < 0) goto err;
-			}
 		} else if (FD_ISSET(ctx.fd_msg_in, &readfds)) {
-			while ((n = read(ctx.fd_msg_in, buf, BUFSIZ)) > 0) {
+			while ((n = read(ctx.fd_msg_in, buf, BUFSIZ)) > 0)
 				if (send(ctx.sock, buf, n, 0) < 0) goto err;
-			}
 		} else if (sel == 0 && ctx.state == SESSION) {
 			xmpp_ping(&ctx);
 		} else { /* data from FIFO */
