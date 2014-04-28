@@ -73,8 +73,8 @@ struct context {
 	enum xmpp_state state;
 
 	/* frontend daemon */
-	int fd_msg_in;
-	int fd_msg_out;
+	FILE *fh_msg;
+	FILE *fh_iq;
 };
 
 #define NULL_CONTEXT {				\
@@ -90,9 +90,9 @@ struct context {
 	NULL,	/* char *dir; */		\
 	-1,	/* int fd_out; */		\
 	-1,	/* int fd_in; */		\
-	OPEN,	/* int state; */		\
-	-1,	/* int fd_msg_in; */		\
-	-1	/* int fd_msg_out; */		\
+	OPEN,	/* enum xmpp_stat; */		\
+	NULL,	/* FILE *fh_msg; */		\
+	NULL	/* FILE *fh_iq; */		\
 }
 
 static void
@@ -193,46 +193,16 @@ xmpp_message(struct context *ctx, char *to, char *text) {
 static bool
 start_message_proccess(struct context *ctx)
 {
-	char jid[BUFSIZ];
-#	define PIPE_READ  0
-#	define PIPE_WRITE 1
-	int pi[2];	/* pipe intput */
-	int po[2];	/* pipe output */
+	char cmd[BUFSIZ];
 
-	if (pipe(pi) == -1) goto err;
-	if (pipe(po) == -1) goto err;
-
-	switch (fork()) {
-	case 0:	/* message handling process */
-		/* don't need these ends of the pipes here */
-		if (close(pi[PIPE_READ]) == -1) goto err;
-		if (close(po[PIPE_WRITE]) == -1) goto err;
-
-		if (dup2(pi[PIPE_WRITE], STDOUT_FILENO) == -1) goto err;
-		if (dup2(po[PIPE_READ], STDIN_FILENO) == -1) goto err;
-
-		if (close(pi[PIPE_WRITE]) == -1) goto err;
-		if (close(po[PIPE_READ]) == -1) goto err;
-
-		snprintf(jid, sizeof jid, "%s@%s", ctx->user, ctx->server);
-		execl("messaged", "messaged", "-j", jid, "-d", ctx->dir, NULL);
-		err(EXIT_FAILURE, "%s: execl", __func__);
-	case -1:
-		goto err;
+	snprintf(cmd, sizeof cmd, "messaged -j %s@%s -d %s",
+	    ctx->user, ctx->server, ctx->dir);
+	if ((ctx->fh_msg = popen(cmd, "w")) == NULL) {
+		perror(__func__);
+		return false;
 	}
 
-	/* don't need these ends of the pipes here */
-	if (close(pi[PIPE_WRITE]) == -1) goto err;
-	if (close(po[PIPE_READ]) == -1) goto err;
-
-	ctx->fd_msg_in = pi[PIPE_READ];
-	ctx->fd_msg_out = po[PIPE_WRITE];
-
 	return true;
- err:
-	if (errno != 0)
-		perror(__func__);
-	return false;
 }
 
 static bool
@@ -320,8 +290,10 @@ server_tag(char *tag, void *data)
 		goto out;
 
 	/* send message tags to message process */
-	if (ctx->fd_msg_out != -1 && strcmp("message", tag_name) == 0)
-		if (write(ctx->fd_msg_out, tag, strlen(tag)) == -1) goto err;
+	if (ctx->fh_msg != NULL && strcmp("message", tag_name) == 0) {
+		if (fputs(tag, ctx->fh_msg) == EOF) goto err;
+		if (fflush(ctx->fh_msg) == EOF) goto err;
+	}
  err:
 	if (errno != 0)
 		perror(__func__);
@@ -463,12 +435,8 @@ main(int argc, char**argv)
 		FD_SET(ctx.fd_in, &readfds);
 		int max_fd = MAX(ctx.sock, ctx.fd_in);
 
-		if (ctx.fd_msg_in != -1) {
-			FD_SET(ctx.fd_msg_in, &readfds);
-			max_fd = MAX(max_fd, ctx.fd_msg_in);
-		}
-
 		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
+		fprintf(stderr, "select(2)\n");
 
 		/* data from xmpp server */
 		if (FD_ISSET(ctx.sock, &readfds)) {
@@ -478,16 +446,12 @@ main(int argc, char**argv)
 			   ctx.state == SESSION) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
 				if (send(ctx.sock, buf, n, 0) < 0) goto err;
-		} else if (FD_ISSET(ctx.fd_msg_in, &readfds)) {
-			while ((n = read(ctx.fd_msg_in, buf, BUFSIZ)) > 0)
-				if (send(ctx.sock, buf, n, 0) < 0) goto err;
 		} else if (sel == 0 && ctx.state == SESSION) {
 			xmpp_ping(&ctx);
 		} else { /* data from FIFO */
 			printf("other event!\n");
 		}
 	}
-
  err:
 	perror(__func__);
 	return EXIT_FAILURE;

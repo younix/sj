@@ -46,7 +46,7 @@ struct contact {
 
 struct context {
 	int fd_in;
-	int fd_out;
+	char *out_file;
 	struct bxml_ctx *bxml;
 	char *jid;
 	char *id;
@@ -56,7 +56,7 @@ struct context {
 
 #define NULL_CONTEXT {		\
 	STDIN_FILENO,		\
-	STDOUT_FILENO,		\
+	NULL,			\
 	NULL,			\
 	NULL,			\
 	NULL,			\
@@ -120,11 +120,18 @@ add_contact(struct context *ctx, const char *jid)
 static void
 msg_send(struct context *ctx, const char *msg, const char *to)
 {
-	printf(
+	FILE *fh = NULL;
+
+	if ((fh = fopen(ctx->out_file, "w")) == NULL) goto err;
+	fprintf(fh,
 	    "<message from='%s' to='%s' type='chat' id='%s'>"
 		"<active xmlns='http://jabber.org/protocol/chatstates'/>"
 		"<body>%s</body>"
 	    "</message>\n", ctx->jid, to, ctx->id, msg);
+	fclose(fh);
+ err:
+	if (errno != 0)
+		perror(__func__);
 }
 
 static bool
@@ -243,7 +250,6 @@ int
 main(int argc, char *argv[])
 {
 	struct context ctx = NULL_CONTEXT;
-	struct contact *c = NULL;
 	int ch;
 
 	while ((ch = getopt(argc, argv, "j:d:o:i:")) != -1) {
@@ -252,7 +258,7 @@ main(int argc, char *argv[])
 			ctx.fd_in = strtol(optarg, NULL, 0);
 			break;
 		case 'o':
-			ctx.fd_out = strtol(optarg, NULL, 0);
+			ctx.out_file = strdup(optarg);
 			break;
 		case 'j':
 			ctx.jid = strdup(optarg);
@@ -270,15 +276,16 @@ main(int argc, char *argv[])
 
 	if (ctx.jid == NULL)
 		usage();
-
+	if (ctx.out_file == NULL)
+		if (asprintf(&ctx.out_file, "%s/in", ctx.dir) < 0) goto err;
 	if (asprintf(&ctx.id, "messaged-%d", getpid()) < 0) goto err;
 	ctx.bxml = bxml_ctx_init(recv_message, &ctx);
 
 	/* check roster directory */
 	build_roster(&ctx);
 
-	setlinebuf(stdout);
 	for (;;) {
+		struct contact *c = NULL;
 		int sel, max_fd = 0;
 		ssize_t n;
 		fd_set readfds;
@@ -310,7 +317,6 @@ main(int argc, char *argv[])
 			if (FD_ISSET(c->fd, &readfds))
 				send_message(&ctx, c);
 	}
-
  err:
 	if (errno != 0)
 		perror(NULL);
