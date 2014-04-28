@@ -117,6 +117,22 @@ add_contact(struct context *ctx, const char *jid)
 	return NULL;
 }
 
+static char *
+prepare_prompt(char *prompt, size_t size, const char *user)
+{
+	time_t timestamp = time(NULL);
+
+	if (prompt == NULL || size == 0)
+		return NULL;
+
+	/* prepare prompt "YYYY-MM-DD HH:MM <FROM> " */
+	strftime(prompt, size, "%F %R <", localtime(&timestamp));
+	strlcat(prompt, user, size);
+	strlcat(prompt, "> ", size);
+
+	return prompt;
+}
+
 static void
 msg_send(struct context *ctx, const char *msg, const char *to)
 {
@@ -137,6 +153,7 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 static bool
 send_message(struct context *ctx, struct contact *con)
 {
+	char prompt[BUFSIZ];
 	char buf[BUFSIZ];
 	ssize_t size = 0;
 
@@ -145,6 +162,11 @@ send_message(struct context *ctx, struct contact *con)
 
 	buf[size] = '\0';
 	msg_send(ctx, buf, con->name);
+
+	prepare_prompt(prompt, sizeof prompt, ctx->jid);
+	if (write(con->out, prompt, strlen(prompt)) == -1) return false;
+	if (write(con->out, buf, size) == -1) return false;
+	if (write(con->out, "\n", 1) == -1) return false;
 
 	return true;
 }
@@ -160,7 +182,6 @@ recv_message(char *tag, void *data)
 	const char *tag_name = NULL;
 	const char *from = NULL;
 	char prompt[BUFSIZ];
-	time_t timestamp = time(NULL);
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
@@ -174,10 +195,7 @@ recv_message(char *tag, void *data)
 	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
 		goto err;
 
-	/* prepare prompt "YYYY-MM-DD HH:MM <FROM> " */
-	strftime(prompt, sizeof prompt, "%F %R <", localtime(&timestamp));
-	strlcat(prompt, from, sizeof prompt);
-	strlcat(prompt, "> ", sizeof prompt);
+	prepare_prompt(prompt, sizeof prompt, from);
 
 	/* try to find contact for this message in roster */
 	LIST_FOREACH(c, &ctx->roster, next)
