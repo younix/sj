@@ -23,6 +23,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -203,7 +204,7 @@ recv_message(char *tag, void *data)
 			break;
 
 	/* if message comes from an unknown JID, create a contact */
-	if (c == LIST_END(&ctx->roster))
+	if (c == NULL)
 		c = add_contact(ctx, from);
 
 	if (tree->child->next->child == NULL) goto err;

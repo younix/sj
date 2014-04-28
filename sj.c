@@ -22,6 +22,7 @@
 #include <err.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -43,6 +44,10 @@
 
 #ifndef MAX
 #define MAX(a, b) ((a) < (b) ? (b) : (a))
+#endif
+
+#ifndef PATH_MAX
+#define PATH_MAX _XOPEN_PATH_MAX
 #endif
 
 /* XMPP session states */
