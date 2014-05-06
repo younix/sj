@@ -30,7 +30,6 @@
 #include <unistd.h>
 
 #include <sys/select.h>
-#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>
@@ -50,13 +49,14 @@
 #define PATH_MAX _XOPEN_PATH_MAX
 #endif
 
+/* ucspi */
+#define WRITE_FD 6
+#define READ_FD 7
+
 /* XMPP session states */
 enum xmpp_state {OPEN, AUTH, BIND_OUT, BIND, SESSION};
 
 struct context {
-	/* socket to xmpp server */
-	int sock;
-
 	/* xml parser */
 	struct bxml_ctx *bxml;
 
@@ -64,8 +64,6 @@ struct context {
 	char *user;
 	char *pass;
 	char *server;
-	char *host;
-	char *port;
 	char *resource;
 	char *id;
 
@@ -83,13 +81,10 @@ struct context {
 };
 
 #define NULL_CONTEXT {				\
-	0,	/* int sock; */			\
 	NULL,	/* struct bxml_ctx; */		\
 	NULL,	/* char *user; */		\
 	NULL,	/* char *pass; */		\
 	NULL,	/* char *server; */		\
-	NULL,	/* char *host; */		\
-	NULL,	/* char *port; */		\
 	NULL,	/* char *resource; */		\
 	NULL,	/* char *id; */			\
 	NULL,	/* char *dir; */		\
@@ -110,7 +105,7 @@ xmpp_ping(struct context *ctx)
 	    "</iq>",
 	    ctx->user, ctx->server, ctx->resource, ctx->server, ctx->id);
 
-	if ((size = send(ctx->sock, msg, size, 0)) < 0)
+	if ((size = write(WRITE_FD, msg, size)) < 0)
 		perror(__func__);
 }
 
@@ -123,7 +118,7 @@ xmpp_session(struct context *ctx)
 		"<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>"
 	    "</iq>" , ctx->server);
 
-	if ((size = send(ctx->sock, msg, size, 0)) < 0)
+	if ((size = write(WRITE_FD, msg, size)) < 0)
 		perror(__func__);
 }
 
@@ -138,7 +133,7 @@ xmpp_bind(struct context *ctx)
 		"</bind>"
 	    "</iq>", ctx->resource);
 
-	if ((size = send(ctx->sock, msg, strlen(msg), 0)) < 0)
+	if ((size = write(WRITE_FD, msg, strlen(msg))) < 0)
 		perror(__func__);
 
 	ctx->state = BIND_OUT;
@@ -155,7 +150,7 @@ xmpp_auth(struct context *ctx)
 		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
 		" mechanism='PLAIN'>%s</auth>", authstr);
 
-	if (send(ctx->sock, msg, size, 0) < 0)
+	if (write(WRITE_FD, msg, size) < 0)
 		perror(__func__);;
 	free(authstr);
 }
@@ -175,12 +170,12 @@ xmpp_init(struct context *ctx)
 		"xmlns:stream='http://etherx.jabber.org/streams'>\n",
 	    ctx->user, ctx->server, ctx->server);
 
-	if (send(ctx->sock, msg, size, 0) < 0)
+	if (write(WRITE_FD, msg, size) < 0)
 		perror(__func__);
 }
 
 static void
-xmpp_message(struct context *ctx, char *to, char *text) {
+xmpp_message(char *to, char *text) {
 	char msg[BUFSIZ];
 	int size = snprintf(msg, sizeof msg,
 	    "<message "
@@ -190,9 +185,9 @@ xmpp_message(struct context *ctx, char *to, char *text) {
 	    "    xml:lang='en'>"
 	    "<body>", to);
 
-	if (send(ctx->sock, msg, size, 0) < 0) perror(__func__); 
-	if (send(ctx->sock, text, strlen(text), 0) < 0) perror(__func__);
-	if (send(ctx->sock, "</body></message>", 17, 0) < 0) perror(__func__);
+	if (write(WRITE_FD, msg, size) < 0) perror(__func__); 
+	if (write(WRITE_FD, text, strlen(text)) < 0) perror(__func__);
+	if (write(WRITE_FD, "</body></message>", 17) < 0) perror(__func__);
 }
 
 static bool
@@ -284,7 +279,7 @@ server_tag(char *tag, void *data)
 		ctx->state = SESSION;
 		start_message_proccess(ctx);	
 		/* HACK: we need real presence handling here! */
-		xmpp_message(ctx, "younix@jabber.ccc.de", "test");
+		xmpp_message("younix@jabber.ccc.de", "test");
 		goto out;
 	}
 
@@ -348,34 +343,25 @@ usage(void)
 int
 main(int argc, char**argv)
 {
-	struct addrinfo hints, *addrinfo = NULL, *addrinfo0 = NULL;
 	int ch;
 
 	/* struct with all context informations */
 	struct context ctx = NULL_CONTEXT;
-	ctx.sock = 0;
 	ctx.user = NULL;
 	ctx.pass = NULL;
 	ctx.server = NULL;
 	asprintf(&ctx.id, "sj-%d", getpid());
-	ctx.port = "5222";
 	ctx.dir = "xmpp";
 	ctx.resource = "sj";
 	ctx.state = OPEN;	/* set inital state of the connection */
 
-	while ((ch = getopt(argc, argv, "d:s:H:p:U:P:r:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:s:U:P:r:")) != -1) {
 		switch (ch) {
 		case 'd':
 			ctx.dir = strdup(optarg);
 			break;
 		case 's':
 			ctx.server = strdup(optarg);
-			break;
-		case 'H':
-			ctx.host = strdup(optarg);
-			break;
-		case 'p':
-			ctx.port = strdup(optarg);
 			break;
 		case 'U':
 			ctx.user = strdup(optarg);
@@ -397,31 +383,6 @@ main(int argc, char**argv)
 	if (ctx.server == NULL || ctx.user == NULL)
 		usage();
 
-	if (ctx.host == NULL)
-		ctx.host = ctx.server;
-
-	/* prepare network connection to xmpp server */
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = PF_UNSPEC;
-	hints.ai_socktype = SOCK_STREAM;
-	getaddrinfo(ctx.host, ctx.port, &hints, &addrinfo0);
-
-	for (addrinfo = addrinfo0; addrinfo; addrinfo = addrinfo->ai_next) {
-		if ((ctx.sock =
-		    socket(addrinfo->ai_family, addrinfo->ai_socktype, 0)) < 0)
-			continue;
-
-		if (connect(ctx.sock, addrinfo->ai_addr,
-		    addrinfo->ai_addrlen) < 0) {
-			close(ctx.sock);
-			continue;
-		}
-
-		break;
-	}
-	freeaddrinfo(addrinfo0);
-	if (ctx.sock < 0) goto err;	/* no network connection */
-
 	/* init block xml parser */
 	ctx.bxml = bxml_ctx_init(server_tag, &ctx);
 	ctx.bxml->block_depth = 1;
@@ -436,21 +397,21 @@ main(int argc, char**argv)
 		fd_set readfds;
 
 		FD_ZERO(&readfds);
-		FD_SET(ctx.sock, &readfds);
+		FD_SET(READ_FD, &readfds);
 		FD_SET(ctx.fd_in, &readfds);
-		int max_fd = MAX(ctx.sock, ctx.fd_in);
+		int max_fd = MAX(READ_FD, ctx.fd_in);
 
 		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
 		fprintf(stderr, "select(2)\n");
 
 		/* data from xmpp server */
-		if (FD_ISSET(ctx.sock, &readfds)) {
-			if ((n = recv(ctx.sock, buf, BUFSIZ, 0)) < 0) goto err;
+		if (FD_ISSET(READ_FD, &readfds)) {
+			if ((n = read(READ_FD, buf, BUFSIZ)) < 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds) &&
 			   ctx.state == SESSION) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
-				if (send(ctx.sock, buf, n, 0) < 0) goto err;
+				if (write(WRITE_FD, buf, n) < 0) goto err;
 		} else if (sel == 0 && ctx.state == SESSION) {
 			xmpp_ping(&ctx);
 		} else { /* data from FIFO */
