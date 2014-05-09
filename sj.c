@@ -197,12 +197,15 @@ start_message_proccess(struct context *ctx)
 
 	snprintf(cmd, sizeof cmd, "messaged -j %s@%s -d %s",
 	    ctx->user, ctx->server, ctx->dir);
-	if ((ctx->fh_msg = popen(cmd, "w")) == NULL) {
-		perror(__func__);
-		return false;
-	}
+	if ((ctx->fh_msg = popen(cmd, "w")) == NULL) goto err;
+
+	snprintf(cmd, sizeof cmd, "iqd -d %s", ctx->dir);
+	if ((ctx->fh_iq = popen(cmd, "w")) == NULL) goto err;
 
 	return true;
+ err:
+	perror(__func__);
+	return false;
 }
 
 static bool
@@ -293,6 +296,13 @@ server_tag(char *tag, void *data)
 	if (ctx->fh_msg != NULL && strcmp("message", tag_name) == 0) {
 		if (fputs(tag, ctx->fh_msg) == EOF) goto err;
 		if (fflush(ctx->fh_msg) == EOF) goto err;
+		goto out;
+	}
+
+	/* send iq tags to iq process */
+	if (ctx->fh_iq != NULL && strcmp("iq", tag_name) == 0) {
+		if (fputs(tag, ctx->fh_iq) == EOF) goto err;
+		if (fflush(ctx->fh_iq) == EOF) goto err;
 	}
  err:
 	if (errno != 0)
@@ -391,6 +401,7 @@ main(int argc, char**argv)
 	xmpp_init(&ctx);
 
 	for (;;) {
+		//errno = 0;
 		char buf[BUFSIZ];
 		ssize_t n = 0;
 		struct timeval tv = {10, 0}; /* interval for keep alive pings */
@@ -398,24 +409,25 @@ main(int argc, char**argv)
 
 		FD_ZERO(&readfds);
 		FD_SET(READ_FD, &readfds);
-		FD_SET(ctx.fd_in, &readfds);
-		int max_fd = MAX(READ_FD, ctx.fd_in);
+		int max_fd = READ_FD;
+
+		if (ctx.state == SESSION) {
+			FD_SET(ctx.fd_in, &readfds);
+			max_fd = MAX(max_fd, ctx.fd_in);
+		}
 
 		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
-		fprintf(stderr, "select(2)\n");
 
 		/* data from xmpp server */
 		if (FD_ISSET(READ_FD, &readfds)) {
 			if ((n = read(READ_FD, buf, BUFSIZ)) < 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
-		} else if (FD_ISSET(ctx.fd_in, &readfds) &&
-			   ctx.state == SESSION) {
+		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
-				if (write(WRITE_FD, buf, n) < 0) goto err;
+				if (write(WRITE_FD, buf, n) < n) goto err;
+			if (errno == EAGAIN) errno = 0;
 		} else if (sel == 0 && ctx.state == SESSION) {
 			xmpp_ping(&ctx);
-		} else { /* data from FIFO */
-			printf("other event!\n");
 		}
 	}
  err:

@@ -60,7 +60,8 @@ recv_iq(char *tag, void *data)
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
 	const char *tag_id = NULL;
-	char path[BUFSIZ];
+	char path[PATH_MAX];
+	int fd;
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
@@ -77,10 +78,10 @@ recv_iq(char *tag, void *data)
 
 	snprintf(path, sizeof path, "%s/%s", ctx->dir, tag_id);
 
-	int fd = open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR);
-	write(fd, tag, strlen(tag));
-	close(fd);
-
+	if ((fd = open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR)) == -1)
+		goto err;
+	if (write(fd, tag, strlen(tag)) == -1) goto err;
+	if (close(fd) == -1) goto err;
  err:
 	if (errno != 0)
 		perror(__func__);
@@ -116,6 +117,7 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
+	/* initialize block parser and set callback function */
 	ctx.bxml = bxml_ctx_init(recv_iq, &ctx);
 
 	for (;;) {
