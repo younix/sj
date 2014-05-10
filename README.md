@@ -41,9 +41,11 @@ The program "sj" just do a few things:
 
 ## build
 
- * git checkout
- * git submodules checkout
- * make [CC=...]
+ * git clone https://github.com/younix/sj.git
+ * cd sj
+ * git submodule init
+ * git submodule update
+ * make
 
 ## plugins
 
