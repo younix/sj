@@ -286,12 +286,6 @@ server_tag(char *tag, void *data)
 		goto out;
 	}
 
-	/* filter out return of ping */
-	if (strcmp("iq", tag_name) == 0 &&
-	    has_attr(node, "id", ctx->id) &&
-	    has_attr(node, "type", "result"))
-		goto out;
-
 	/* send message tags to message process */
 	if (ctx->fh_msg != NULL && strcmp("message", tag_name) == 0) {
 		if (fputs(tag, ctx->fh_msg) == EOF) goto err;
@@ -300,7 +294,10 @@ server_tag(char *tag, void *data)
 	}
 
 	/* send iq tags to iq process */
-	if (ctx->fh_iq != NULL && strcmp("iq", tag_name) == 0) {
+	if (strcmp("iq", tag_name) == 0) {
+		if (has_attr(node, "id", ctx->id) || ctx->fh_iq == NULL)
+			goto out;
+
 		if (fputs(tag, ctx->fh_iq) == EOF) goto err;
 		if (fflush(ctx->fh_iq) == EOF) goto err;
 	}
