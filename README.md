@@ -21,10 +21,11 @@ The program "sj" just do a few things:
 
 ## TODO
 
-  * replace socket-handling with UCSPI
-  * add SSL support
-  * designing interface for backend programs
-  * replace linked list with one of queue.h
+  * ~~replace socket-handling with UCSPI~~
+  * ~~add SSL support~~
+  * ~~designing interface for backend programs~~
+  * ~~replace linked list with one of queue.h~~
+  * write front end tools
   * write manpages for all tools
 
 ## required
@@ -34,10 +35,10 @@ The program "sj" just do a few things:
 ## tested with
 
  * OpenBSD
+   * gcc 4.2.1
+   * gcc 4.8.2
+   * clang 3.5
  * MacOSX
- * gcc 4.2.1
- * gcc 4.8.2
- * clang 3.5
 
 ## build
 
