@@ -29,6 +29,28 @@
 #include <mxml.h>
 
 bool
+add(FILE *fh, const char *jid, const char *name, const char *group)
+{
+	char group_str[BUFSIZ];
+	char name_str[BUFSIZ];
+	snprintf(group_str, sizeof group_str, "<group>%s</group>", group);
+	snprintf(name_str, sizeof group_str, "name='%s'", name);
+
+	if (fprintf(fh,
+	    "<iq type='set' id='roster-%d'>"
+		"<query xmlns='jabber:iq:roster'>"
+		   "<item jid='%s' %s>%s</item>"
+		"</query>"
+	    "</iq>", getpid(), jid,
+	    name  == NULL ? "" : name_str,
+	    group == NULL ? "" : group_str) == -1) goto err;
+	return true;
+ err:
+	perror(__func__);
+	return false;
+}
+
+bool
 list(mxml_node_t *iq)
 {
 	mxml_node_t *item = NULL;
@@ -59,6 +81,7 @@ main(int argc, char *argv[])
 	FILE *fh = NULL;
 	int ch;
 	bool list_flag = false;
+	bool add_flag = false;
 	char path_out[_XOPEN_PATH_MAX];
 	char path_in[_XOPEN_PATH_MAX];
 	char *dir = ".";
@@ -66,16 +89,20 @@ main(int argc, char *argv[])
 	char *name = NULL;
 	char *group = NULL;
 
-	while ((ch = getopt(argc, argv, "d:l")) != -1) {
+	while ((ch = getopt(argc, argv, "d:g:la:")) != -1) {
 		switch (ch) {
-		case 'j':
-			if ((jid = strdup(optarg)) == NULL) goto err;
+		case 'g':
+			if ((group = strdup(optarg)) == NULL) goto err;
 			break;
 		case 'd':
 			dir = strdup(optarg);
 			break;
 		case 'l':
 			list_flag = true;
+			break;
+		case 'a':
+			add_flag = true;
+			if ((jid = strdup(optarg)) == NULL) goto err;
 			break;
 		default:
 			usage();
@@ -98,10 +125,15 @@ main(int argc, char *argv[])
 	/* send query to server */
 	snprintf(path_out, sizeof path_out, "%s/%s", dir, "in");
 	if ((fh = fopen(path_out, "w")) == NULL) goto err;
-	if (fprintf(fh,
-	    "<iq type='get' id='roster-%d'>"
-		"<query xmlns='jabber:iq:roster'/>"
-	    "</iq>", getpid()) == -1) goto err;
+
+	if (add_flag)
+		add(fh, jid, name, group);
+	else if (list_flag)
+		if (fprintf(fh,
+		    "<iq type='get' id='roster-%d'>"
+			"<query xmlns='jabber:iq:roster'/>"
+		    "</iq>", getpid()) == -1) goto err;
+
 	if (fclose(fh) == EOF) goto err;
 
 	/* read answer from server */
@@ -110,7 +142,10 @@ main(int argc, char *argv[])
 	if (fclose(fh) == EOF) goto err;
 	if (unlink(path_in) == -1) goto err;
 
-	if (list(tree->child->next) == false) return EXIT_FAILURE;
+	if (list_flag)
+		if (list(tree->child->next) == false) return EXIT_FAILURE;
+
+	/* TODO: Check add answer from server */
 
 	return EXIT_SUCCESS;
  err:
