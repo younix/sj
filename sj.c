@@ -338,10 +338,10 @@ usage(void)
 {
 	fprintf(stderr, "usage: sj OPTIONS\n"
 		"OPTIONS:\n"
-		"\t-U <user>\n"
+		"\t-u <user>\n"
+		"\t-p <pass>\n"
 		"\t-H <host>\n"
 		"\t-s <server>\n"
-		"\t-p <port>\n"
 		"\t-r <resource>\n"
 		"\t-d <directory>\n");
 	exit(EXIT_FAILURE);
@@ -362,7 +362,7 @@ main(int argc, char**argv)
 	ctx.resource = "sj";
 	ctx.state = OPEN;	/* set inital state of the connection */
 
-	while ((ch = getopt(argc, argv, "d:s:U:P:r:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:s:u:p:r:")) != -1) {
 		switch (ch) {
 		case 'd':
 			ctx.dir = strdup(optarg);
@@ -370,10 +370,10 @@ main(int argc, char**argv)
 		case 's':
 			ctx.server = strdup(optarg);
 			break;
-		case 'U':
+		case 'u':
 			ctx.user = strdup(optarg);
 			break;
-		case 'P':
+		case 'p':
 			ctx.pass = strdup(optarg);
 			break;
 		case 'r':
