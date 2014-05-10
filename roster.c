@@ -14,6 +14,9 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define _XOPEN_SOURCE 700
+
+#include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
 #include <stdbool.h>
@@ -22,6 +25,26 @@
 #include <unistd.h>
 
 #include <sys/stat.h>
+
+#include <mxml.h>
+
+bool
+list(mxml_node_t *iq)
+{
+	mxml_node_t *item = NULL;
+
+	if (iq == NULL) return false;
+	if (iq->child == NULL) return false;
+
+	for (item = iq->child->child; item != NULL; item = item->next) {
+		const char *name = mxmlElementGetAttr(item, "name");
+		const char *jid = mxmlElementGetAttr(item, "jid");
+		const char *sub = mxmlElementGetAttr(item, "subscription");
+
+		printf("%-30s\t%s\t%s\n", jid, sub, name == NULL ? "" : name);
+	}
+	return true;
+}
 
 void
 usage(void)
@@ -39,9 +62,18 @@ main(int argc, char *argv[])
 	char path_out[_XOPEN_PATH_MAX];
 	char path_in[_XOPEN_PATH_MAX];
 	char *dir = ".";
+	char *jid = NULL;
+	char *name = NULL;
+	char *group = NULL;
 
-	while ((ch = getopt(argc, argv, "bf:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:l")) != -1) {
 		switch (ch) {
+		case 'j':
+			if ((jid = strdup(optarg)) == NULL) goto err;
+			break;
+		case 'd':
+			dir = strdup(optarg);
+			break;
 		case 'l':
 			list_flag = true;
 			break;
@@ -52,6 +84,12 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+
+	/* HACK: we need this, cause mxml can't parse tags by itself */
+        mxml_node_t *tree = NULL;
+        const char *base = "<?xml ?><stream:stream></stream:stream>";
+	tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
+	assert(tree != NULL);
 
 	/* prepare fifo for answer from server */
 	snprintf(path_in, sizeof path_in, "%s/roster-%d", dir, getpid());
@@ -68,9 +106,11 @@ main(int argc, char *argv[])
 
 	/* read answer from server */
 	if ((fh = fopen(path_in, "r")) == NULL) goto err;
-	// TODO: mxml
+	mxmlLoadFile(tree, fh, MXML_NO_CALLBACK);
 	if (fclose(fh) == EOF) goto err;
 	if (unlink(path_in) == -1) goto err;
+
+	if (list(tree->child->next) == false) return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
  err:
