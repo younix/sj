@@ -15,10 +15,11 @@ usage(void)
 int
 main(int argc, char*argv[])
 {
-	int ch, fh;
+	int ch;
 	bool list_flag = false;
 	char path[_XOPEN_PATH_MAX];
 	char *dir = ".";
+	FILE *fh = NULL;
 
 	while ((ch = getopt(argc, argv, "l")) != -1) {
 		switch (ch) {
@@ -34,13 +35,13 @@ main(int argc, char*argv[])
 	argv += optind;
 
 	snprintf(path, sizeof path, "%s/roster-%d", dir, getpid());
-	if ((fh = open(path, O_RDONLY)) == -1) goto err;
+	if ((fh = fopen(path, "r")) == NULL) goto err;
 
 	if (list_flag == true) {
 		fprintf(fh, "");
 	}
 
-	if (close(fh) == -1) goto err;
+	if (fclose(fh) == -1) goto err;
 
 	return EXIT_SUCCESS;
  err:

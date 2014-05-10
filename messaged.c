@@ -14,6 +14,7 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#define _POSIX_C_SOURCE 201405L
 #define _XOPEN_SOURCE 700
 #define _BSD_SOURCE
 
@@ -30,9 +31,10 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <sys/queue.h>
+#include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <sys/queue.h>
 
 #include <mxml.h>
 

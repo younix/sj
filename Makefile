@@ -1,5 +1,5 @@
 CC ?= cc
-CFLAGS := -std=c99 -pedantic -Wall -Wextra -O3 -g
+CFLAGS := -std=c99 -pedantic -Wall -Wextra -O3 -g -D_DARWIN_C_SOURCE
 CFLAGS_MXML := `pkg-config --cflags mxml`
 LIBS_MXML := `pkg-config --libs mxml`
 
