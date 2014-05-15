@@ -82,6 +82,7 @@ usage(void)
 {
 	fprintf(stderr, "roster [-d <dir>] -l\n");
 	fprintf(stderr, "roster [-d <dir>] [-n <name>] [-g group] -a <jid>\n");
+	fprintf(stderr, "roster [-d <dir>] -r <jid>\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -92,6 +93,7 @@ main(int argc, char *argv[])
 	int ch;
 	bool list_flag = false;
 	bool add_flag = false;
+	bool remove_flag = false;
 	char path_out[_XOPEN_PATH_MAX];
 	char path_in[_XOPEN_PATH_MAX];
 	char *dir = ".";
@@ -99,7 +101,7 @@ main(int argc, char *argv[])
 	char *name = NULL;
 	char *group = NULL;
 
-	while ((ch = getopt(argc, argv, "d:g:n:la:h")) != -1) {
+	while ((ch = getopt(argc, argv, "d:g:n:la:r:h")) != -1) {
 		switch (ch) {
 		case 'd':
 			dir = strdup(optarg);
@@ -115,6 +117,10 @@ main(int argc, char *argv[])
 			break;
 		case 'a':
 			add_flag = true;
+			if ((jid = strdup(optarg)) == NULL) goto err;
+			break;
+		case 'r':
+			remove_flag = true;
 			if ((jid = strdup(optarg)) == NULL) goto err;
 			break;
 		case 'h':
@@ -140,13 +146,23 @@ main(int argc, char *argv[])
 	snprintf(path_out, sizeof path_out, "%s/%s", dir, "in");
 	if ((fh = fopen(path_out, "w")) == NULL) goto err;
 
-	if (add_flag)
+	if (add_flag && jid != NULL) {
 		add(fh, jid, name, group);
-	else if (list_flag)
+	} else if (list_flag) {
 		if (fprintf(fh,
 		    "<iq type='get' id='roster-%d'>"
 			"<query xmlns='jabber:iq:roster'/>"
 		    "</iq>", getpid()) == -1) goto err;
+	} else if (remove_flag && jid != NULL) {
+		if (fprintf(fh,
+		    "<iq type='set' id='roster-%d'>"
+			"<query xmlns='jabber:iq:roster'>"
+			    "<item jid='%s' subscription='remove'/>"
+			"</query>"
+		    "</iq>", getpid(), jid) == -1) goto err;
+	} else {
+		usage();
+	}
 
 	if (fclose(fh) == EOF) goto err;
 
