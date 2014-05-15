@@ -29,6 +29,15 @@
 #include <mxml.h>
 
 bool
+result(mxml_node_t *iq)
+{
+	if (iq == NULL) return false;
+	if (iq->child != NULL) return false;
+
+	return true;
+}
+
+bool
 add(FILE *fh, const char *jid, const char *name, const char *group)
 {
 	char group_str[BUFSIZ];
@@ -71,7 +80,8 @@ list(mxml_node_t *iq)
 void
 usage(void)
 {
-	fprintf(stderr, "roster [-l]\n");
+	fprintf(stderr, "roster [-d <dir>] -l\n");
+	fprintf(stderr, "roster [-d <dir>] [-n <name>] [-g group] -a <jid>\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -89,13 +99,16 @@ main(int argc, char *argv[])
 	char *name = NULL;
 	char *group = NULL;
 
-	while ((ch = getopt(argc, argv, "d:g:la:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:g:n:la:h")) != -1) {
 		switch (ch) {
+		case 'd':
+			dir = strdup(optarg);
+			break;
 		case 'g':
 			if ((group = strdup(optarg)) == NULL) goto err;
 			break;
-		case 'd':
-			dir = strdup(optarg);
+		case 'n':
+			if ((name = strdup(optarg)) == NULL) goto err;
 			break;
 		case 'l':
 			list_flag = true;
@@ -104,6 +117,7 @@ main(int argc, char *argv[])
 			add_flag = true;
 			if ((jid = strdup(optarg)) == NULL) goto err;
 			break;
+		case 'h':
 		default:
 			usage();
 			/* NOTREACHED */
@@ -145,7 +159,8 @@ main(int argc, char *argv[])
 	if (list_flag)
 		if (list(tree->child->next) == false) return EXIT_FAILURE;
 
-	/* TODO: Check add answer from server */
+	if (add_flag)
+		if (result(tree->child->next) == false) return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
  err:
