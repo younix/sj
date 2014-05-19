@@ -3,7 +3,7 @@ CFLAGS := -std=c99 -pedantic -Wall -Wextra -O3 -g -D_DARWIN_C_SOURCE
 CFLAGS_MXML := `pkg-config --cflags mxml`
 LIBS_MXML := `pkg-config --libs mxml`
 
-.PHONY: all test clean debug update
+.PHONY: all test clean debug update install
 .SUFFIXES: .o .c
 
 BINS=sj messaged iqd roster
@@ -49,6 +49,10 @@ debug:
 update:
 	cd bxml; git pull origin master
 	cd sasl; git pull origin master
+
+install:
+	mkdir -p ${HOME}/bin
+	cp $(BINS) ${HOME}/bin
 
 include bxml/Makefile.inc
 include sasl/Makefile.inc
