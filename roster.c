@@ -96,7 +96,7 @@ main(int argc, char *argv[])
 	bool remove_flag = false;
 	char path_out[_XOPEN_PATH_MAX];
 	char path_in[_XOPEN_PATH_MAX];
-	char *dir = ".";
+	char *dir = getenv("SJ_DIR");
 	char *jid = NULL;
 	char *name = NULL;
 	char *group = NULL;
@@ -131,6 +131,9 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+
+	if (dir == NULL)
+		usage();
 
 	/* HACK: we need this, cause mxml can't parse tags by itself */
         mxml_node_t *tree = NULL;

@@ -339,7 +339,7 @@ usage(void)
 	fprintf(stderr, "usage: sj OPTIONS\n"
 		"OPTIONS:\n"
 		"\t-u <user>\n"
-		"\t-p <pass>\n"
+		"\t-p <pass-env-var>\n"
 		"\t-H <host>\n"
 		"\t-s <server>\n"
 		"\t-r <resource>\n"
@@ -354,13 +354,14 @@ main(int argc, char**argv)
 
 	/* struct with all context informations */
 	struct context ctx = NULL_CONTEXT;
-	ctx.user = NULL;
-	ctx.pass = NULL;
-	ctx.server = NULL;
 	asprintf(&ctx.id, "sj-%d", getpid());
-	ctx.dir = "xmpp";
-	ctx.resource = "sj";
 	ctx.state = OPEN;	/* set inital state of the connection */
+
+	ctx.user     = getenv("SJ_USER");
+	ctx.pass     = getenv("SJ_PASSWORD");
+	ctx.server   = getenv("SJ_SERVER");
+	ctx.resource = getenv("SJ_RESOURCE");
+	ctx.dir      = getenv("SJ_DIR");
 
 	while ((ch = getopt(argc, argv, "d:s:u:p:r:")) != -1) {
 		switch (ch) {
@@ -374,7 +375,7 @@ main(int argc, char**argv)
 			ctx.user = strdup(optarg);
 			break;
 		case 'p':
-			ctx.pass = strdup(optarg);
+			ctx.pass = getpass("password:");
 			break;
 		case 'r':
 			ctx.resource = strdup(optarg);
@@ -387,8 +388,11 @@ main(int argc, char**argv)
 	argc -= optind;
 	argv += optind;
 
-	if (ctx.server == NULL || ctx.user == NULL)
+	if (ctx.server == NULL || ctx.user == NULL || ctx.pass == NULL)
 		usage();
+
+	if (ctx.dir == NULL)
+		ctx.dir = "xmpp";
 
 	/* init block xml parser */
 	ctx.bxml = bxml_ctx_init(server_tag, &ctx);
@@ -398,7 +402,6 @@ main(int argc, char**argv)
 	xmpp_init(&ctx);
 
 	for (;;) {
-		//errno = 0;
 		char buf[BUFSIZ];
 		ssize_t n = 0;
 		struct timeval tv = {10, 0}; /* interval for keep alive pings */
