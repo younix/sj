@@ -174,22 +174,6 @@ xmpp_init(struct context *ctx)
 		perror(__func__);
 }
 
-static void
-xmpp_message(char *to, char *text) {
-	char msg[BUFSIZ];
-	int size = snprintf(msg, sizeof msg,
-	    "<message "
-	    "    id='ktx72v49'"
-	    "    to='%s'"
-	    "    type='chat'"
-	    "    xml:lang='en'>"
-	    "<body>", to);
-
-	if (write(WRITE_FD, msg, size) < 0) perror(__func__); 
-	if (write(WRITE_FD, text, strlen(text)) < 0) perror(__func__);
-	if (write(WRITE_FD, "</body></message>", 17) < 0) perror(__func__);
-}
-
 static bool
 start_message_proccess(struct context *ctx)
 {
@@ -281,8 +265,6 @@ server_tag(char *tag, void *data)
 	    has_attr(sub_node, "xmlns", "urn:ietf:params:xml:ns:xmpp-session")){
 		ctx->state = SESSION;
 		start_message_proccess(ctx);	
-		/* HACK: we need real presence handling here! */
-		xmpp_message("younix@jabber.ccc.de", "test");
 		goto out;
 	}
 

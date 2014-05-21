@@ -6,7 +6,7 @@ LIBS_MXML := `pkg-config --libs mxml`
 .PHONY: all test clean debug update install
 .SUFFIXES: .o .c
 
-BINS=sj messaged iqd roster
+BINS=sj messaged iqd roster presence
 
 all: $(BINS)
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
@@ -22,6 +22,9 @@ iqd: iqd.o bxml/bxml.o
 roster: roster.o
 	$(CC) -o $@ $(LIBS_MXML) roster.o
 
+presence: presence.o
+	$(CC) -o $@ presence.o
+
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
 
@@ -33,6 +36,9 @@ iqd.o: iqd.c bxml/bxml.h
 
 roster.o: roster.c
 	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ roster.c
+
+presence.o: presence.c
+	$(CC) $(CFLAGS) -c -o $@ presence.c
 
 .c.o:
 	$(CC) $(CFLAGS) -c -o $@ $<
