@@ -30,7 +30,8 @@ The program "sj" just do a few things:
 
 ## required
 
-  * mini-xml-lib
+  * mxml 2.8
+  * libbsd (for GNU-systems like Linux)
 
 ## tested with
 
