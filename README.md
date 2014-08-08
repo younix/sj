@@ -40,6 +40,9 @@ The program "sj" just do a few things:
    * gcc 4.8.2
    * clang 3.5
  * MacOSX
+ * GNU/Linux
+   * gcc (Debian 4.7.2-5)
+   * clang (Debian 3.0-6.2)
 
 ## build
 

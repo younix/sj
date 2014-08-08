@@ -14,10 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#define _POSIX_C_SOURCE 201405L
-#define _XOPEN_SOURCE 700
-#define _BSD_SOURCE
-
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -27,7 +23,13 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
+
+#ifdef USE_LIBBSD
+#	include <bsd/string.h>
+#else
+#	include <string.h>
+#endif
+
 #include <time.h>
 #include <unistd.h>
 

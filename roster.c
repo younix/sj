@@ -94,8 +94,8 @@ main(int argc, char *argv[])
 	bool list_flag = false;
 	bool add_flag = false;
 	bool remove_flag = false;
-	char path_out[_XOPEN_PATH_MAX];
-	char path_in[_XOPEN_PATH_MAX];
+	char path_out[PATH_MAX];
+	char path_in[PATH_MAX];
 	char *dir = getenv("SJ_DIR");
 	char *jid = NULL;
 	char *name = NULL;

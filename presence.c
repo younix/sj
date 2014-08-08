@@ -67,7 +67,7 @@ main(int argc, char *argv[])
 {
 	FILE *fh = NULL;
 	int ch;
-	char path_out[_XOPEN_PATH_MAX];
+	char path_out[PATH_MAX];
 	char *dir = getenv("SJ_DIR");
 	char *to = NULL;
 	char *show = NULL;
