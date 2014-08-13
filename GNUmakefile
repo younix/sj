@@ -1,9 +1,15 @@
+OS := $(shell uname -s)
+
 # GNU/Linux
-$(ifeq `uname -s` "Linux", CFLAGS_BSD := `pkg-config --cflags libbsd`)
-$(ifeq `uname -s` "Linux", LIBS_BSD := `pkg-config --libs libbsd`)
-$(ifeq `uname -s` "Linux", DEFINES := -DUSE_LIBBSD)
+ifeq ($(OS), Linux)
+	CFLAGS_BSD := `pkg-config --cflags libbsd`
+	LIBS_BSD := `pkg-config --libs libbsd`
+	DEFINES := -DUSE_LIBBSD
+endif
 
 # MacOSX
-$(ifeq `uname -s` "Darwin", DEFINES := -D_DARWIN_C_SOURCE)
+ifeq ($(OS), Darwin)
+	DEFINES := -D_DARWIN_C_SOURCE
+endif
 
 include Makefile
