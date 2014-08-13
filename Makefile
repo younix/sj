@@ -43,9 +43,6 @@ iqd.o: iqd.c bxml/bxml.h
 roster.o: roster.c
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ roster.c
 
-presence.o: presence.c
-	@$(CC) $(CFLAGS) -c -o $@ presence.c
-
 .c.o:
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
