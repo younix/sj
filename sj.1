@@ -1,0 +1,42 @@
+.Dd $Mdocdate$
+.Dt SJ 1
+.Os
+.Sh NAME
+.Nm sj
+.Nd handling XMPP message tags
+.Sh SYNOPSIS
+.Nm
+.Fl j Ar JID
+.Fl d Ar DIR
+.Sh DESCRIPTION
+The
+.Nm
+is a client daemon to the xmpp chat protocoll.
+.Sh ENVIRONMENT
+.Bl -tag -width SJ_PASSWORD
+.It Ev SJ_DIR
+Path to sj directory stucture.
+.It Ev SJ_USER
+Username for xmpp-server login.
+.It Ev SJ_SERVER
+XMPP server domain name.
+.It Ev SJ_RESOURCES
+Resources for this XMPP session.
+.El
+.Sh FILES
+.Sh EXIT STATUS
+.Sh EXAMPLES
+export SJ_USER=alice
+export SJ_PASSWORD=xxxxx
+tcpclient jabber.org 5223 sslc sj
+.Sh SEE ALSO
+.Xr messaged 1 .
+.Xr iqd 1 .
+.Xr ii 1
+.Sh STANDARDS
+XMPP CORE
+.%R RFC 6120 ,
+XMPP IM
+.%R RFC 6121
+.Sh AUTHORS
+Jan Klemkow
