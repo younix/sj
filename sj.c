@@ -26,6 +26,8 @@
 #include <string.h>
 #include <unistd.h>
 
+#include <readpassphrase.h>
+
 #include <sys/select.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -329,6 +331,7 @@ int
 main(int argc, char**argv)
 {
 	int ch;
+	char pass[BUFSIZ];
 
 	/* struct with all context informations */
 	struct context ctx = NULL_CONTEXT;
@@ -362,13 +365,15 @@ main(int argc, char**argv)
 	argc -= optind;
 	argv += optind;
 
-	if (ctx.server == NULL || ctx.user == NULL || ctx.pass == NULL)
+	if (ctx.server == NULL || ctx.user == NULL)
 		usage();
 
 	if (ctx.dir == NULL)
 		ctx.dir = "xmpp";
 
-	ctx.pass = getpass("password:");
+	if ((ctx.pass = readpassphrase("password: ", pass, sizeof pass, 0))
+	    == NULL)
+		goto err;
 
 	/* init block xml parser */
 	ctx.bxml = bxml_ctx_init(server_tag, &ctx);
@@ -376,6 +381,9 @@ main(int argc, char**argv)
 
 	init_dir(&ctx);
 	xmpp_init(&ctx);
+
+	/* delete passwort after login */
+	explicit_bzero(pass, sizeof pass);
 
 	for (;;) {
 		char buf[BUFSIZ];
