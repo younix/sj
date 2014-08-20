@@ -318,7 +318,6 @@ usage(void)
 	fprintf(stderr, "usage: sj OPTIONS\n"
 		"OPTIONS:\n"
 		"\t-u <user>\n"
-		"\t-p <pass-env-var>\n"
 		"\t-H <host>\n"
 		"\t-s <server>\n"
 		"\t-r <resource>\n"
@@ -337,7 +336,6 @@ main(int argc, char**argv)
 	ctx.state = OPEN;	/* set inital state of the connection */
 
 	ctx.user     = getenv("SJ_USER");
-	ctx.pass     = getenv("SJ_PASSWORD");
 	ctx.server   = getenv("SJ_SERVER");
 	ctx.resource = getenv("SJ_RESOURCE");
 	ctx.dir      = getenv("SJ_DIR");
@@ -352,9 +350,6 @@ main(int argc, char**argv)
 			break;
 		case 'u':
 			ctx.user = strdup(optarg);
-			break;
-		case 'p':
-			ctx.pass = getpass("password:");
 			break;
 		case 'r':
 			ctx.resource = strdup(optarg);
@@ -372,6 +367,8 @@ main(int argc, char**argv)
 
 	if (ctx.dir == NULL)
 		ctx.dir = "xmpp";
+
+	ctx.pass = getpass("password:");
 
 	/* init block xml parser */
 	ctx.bxml = bxml_ctx_init(server_tag, &ctx);
