@@ -20,7 +20,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <netdb.h>
-#include <pwd.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -260,9 +260,9 @@ server_tag(char *tag, void *data)
 
 	/* session completed */
 	if (ctx->state == BIND && strcmp("iq", tag_name) == 0 &&
-	    has_attr(node, "id", "sess_1") &&
-	    has_attr(sub_node, "xmlns", "urn:ietf:params:xml:ns:xmpp-session")){
+	    has_attr(node, "id", "sess_1") && has_attr(node, "type", "result")){
 		ctx->state = SESSION;
+		fprintf(stderr, "start message process!\n");
 		start_message_proccess(ctx);	
 		goto out;
 	}
@@ -312,6 +312,7 @@ init_dir(struct context *ctx)
 	return;
  err:
 	perror(__func__);
+	exit(EXIT_FAILURE);
 }
 
 static void
@@ -371,6 +372,9 @@ main(int argc, char**argv)
 	if (ctx.dir == NULL)
 		ctx.dir = "xmpp";
 
+	if (ctx.resource == NULL)
+		ctx.resource = "sj";
+
 	if ((ctx.pass = readpassphrase("password: ", pass, sizeof pass, 0))
 	    == NULL)
 		goto err;
@@ -381,9 +385,6 @@ main(int argc, char**argv)
 
 	init_dir(&ctx);
 	xmpp_init(&ctx);
-
-	/* delete passwort after login */
-	explicit_bzero(pass, sizeof pass);
 
 	for (;;) {
 		char buf[BUFSIZ];
