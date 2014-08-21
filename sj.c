@@ -26,7 +26,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#include <readpassphrase.h>
+#ifdef USE_LIBBSD
+#	include <bsd/readpassphrase.h>
+#else
+#	include <readpassphrase.h>
+#endif
+
 
 #include <sys/select.h>
 #include <sys/stat.h>
@@ -213,7 +218,6 @@ server_tag(char *tag, void *data)
 {
 	struct context *ctx = data;
 	static mxml_node_t *node = NULL;
-	static mxml_node_t *sub_node = NULL;
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
@@ -225,7 +229,6 @@ server_tag(char *tag, void *data)
 
 	if ((node = tree->child->next) == NULL)
 		err(EXIT_FAILURE, "no node found");
-	sub_node = node->child;
 
 	const char *tag_name = mxmlGetElement(node);
 	if (tag_name == NULL) goto err;

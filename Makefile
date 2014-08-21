@@ -16,7 +16,7 @@ BINS=sj messaged iqd roster presence
 
 all: $(BINS)
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
-	@$(CC) -o $@ $(LIBS_MXML) -lm \
+	@$(CC) -o $@ $(LIBS_MXML) $(LIBS_BSD) -lm \
 	    sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 
 messaged: messaged.o bxml/bxml.o
