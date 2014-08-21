@@ -2,8 +2,6 @@ CC ?= cc
 
 DEFINES	:= $(DEFINES) -D_POSIX_C_SOURCE=201405L -D_XOPEN_SOURCE=700
 DEFINES	:= $(DEFINES) -D_BSD_SOURCE
-DEFINES	:= $(DEFINES) -D_GNU_SOURCE		# For GNU/Linux
-DEFINES	:= $(DEFINES) -D_DARWIN_C_SOURCE	# For MacOSX
 
 CFLAGS	:= -std=c99 -pedantic -Wall -Wextra -O3 -g $(DEFINES)
 CFLAGS_MXML := `pkg-config --cflags mxml`
