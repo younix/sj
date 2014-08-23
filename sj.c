@@ -265,8 +265,7 @@ server_tag(char *tag, void *data)
 	if (ctx->state == BIND && strcmp("iq", tag_name) == 0 &&
 	    has_attr(node, "id", "sess_1") && has_attr(node, "type", "result")){
 		ctx->state = SESSION;
-		fprintf(stderr, "start message process!\n");
-		start_sub_proccess(ctx);	
+		start_sub_proccess(ctx);
 		goto out;
 	}
 
