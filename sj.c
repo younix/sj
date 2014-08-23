@@ -179,7 +179,7 @@ xmpp_init(struct context *ctx)
 }
 
 static bool
-start_message_proccess(struct context *ctx)
+start_sub_proccess(struct context *ctx)
 {
 	char cmd[BUFSIZ];
 
@@ -266,7 +266,7 @@ server_tag(char *tag, void *data)
 	    has_attr(node, "id", "sess_1") && has_attr(node, "type", "result")){
 		ctx->state = SESSION;
 		fprintf(stderr, "start message process!\n");
-		start_message_proccess(ctx);	
+		start_sub_proccess(ctx);	
 		goto out;
 	}
 

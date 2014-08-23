@@ -14,8 +14,6 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
-#define _XOPEN_SOURCE 700
-
 #include <assert.h>
 #include <fcntl.h>
 #include <limits.h>
