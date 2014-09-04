@@ -134,8 +134,8 @@ main(int argc, char *argv[])
 		usage();
 
 	/* HACK: we need this, cause mxml can't parse tags by itself */
-        mxml_node_t *tree = NULL;
-        const char *base = "<?xml ?><stream:stream></stream:stream>";
+	mxml_node_t *tree = NULL;
+	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	assert(tree != NULL);
 
