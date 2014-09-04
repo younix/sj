@@ -14,34 +14,44 @@ BINS=sj messaged iqd roster presence
 
 all: $(BINS)
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
+	@echo "Build: $@"
 	@$(CC) -o $@ $(LIBS_MXML) $(LIBS_BSD) -lm \
 	    sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 
 messaged: messaged.o bxml/bxml.o
+	@echo "Build: $@"
 	@$(CC) -o $@ $(LIBS_MXML) $(LIBS_BSD) messaged.o bxml/bxml.o
 
 iqd: iqd.o bxml/bxml.o
+	@echo "Build: $@"
 	@$(CC) -o $@ $(LIBS_MXML) iqd.o bxml/bxml.o
 
 roster: roster.o
+	@echo "Build: $@"
 	@$(CC) -o $@ $(LIBS_MXML) roster.o
 
 presence: presence.o
+	@echo "Build: $@"
 	@$(CC) -o $@ presence.o
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
+	@echo "Build: $@"
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
 
 messaged.o: messaged.c bxml/bxml.h
+	@echo "Build: $@"
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ messaged.c
 
 iqd.o: iqd.c bxml/bxml.h
+	@echo "Build: $@"
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ iqd.c
 
 roster.o: roster.c
+	@echo "Build: $@"
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ roster.c
 
 .c.o:
+	@echo "Build: $@"
 	@$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
