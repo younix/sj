@@ -44,6 +44,7 @@
 
 struct contact {
 	char *name;
+	char in_path[PATH_MAX];
 	int fd;		/* fd to fifo for input */
 	int out;	/* fd to output text file */
 	LIST_ENTRY(contact) next;
@@ -100,10 +101,12 @@ add_contact(struct context *ctx, const char *jid)
 	if (mkdir(path, S_IRWXU) == -1 && errno != EEXIST) goto err;
 
 	/* prepare and open the "in" file */
-	if (snprintf(path, sizeof path, "%s/%s/in", ctx->dir, c->name) == 0)
+	if (snprintf(c->in_path, sizeof c->in_path, "%s/%s/in",
+	    ctx->dir, c->name) == 0)
 		goto err;
-	if (mkfifo(path, S_IRUSR|S_IWUSR) == -1 && errno != EEXIST) goto err;
-	if ((c->fd = open(path, O_RDONLY|O_NONBLOCK, 0)) == -1) goto err;
+	if (mkfifo(c->in_path, S_IRUSR|S_IWUSR) == -1 && errno != EEXIST)
+		goto err;
+	if ((c->fd = open(c->in_path, O_RDONLY|O_NONBLOCK, 0)) == -1) goto err;
 
 	/* prepare and open the "out" file */
 	if (snprintf(path, sizeof path, "%s/%s/out", ctx->dir, c->name) == 0)
@@ -162,15 +165,24 @@ send_message(struct context *ctx, struct contact *con)
 	char buf[BUFSIZ];
 	ssize_t size = 0;
 
-	if ((size = read(con->fd, buf, BUFSIZ-1)) < 0)
+	if ((size = read(con->fd, buf, sizeof(buf) - 1)) < 0)
 		return false;
+
+	/* HACK: This is a Hack just for Linux! */
+	fprintf(stderr, "reopen: %s\n", con->in_path);
+	if (close(con->fd) == -1) return false;
+	if ((con->fd = open(con->in_path, O_RDONLY|O_NONBLOCK, 0)) == -1)
+		return false;
+
+	if (size == 0)
+		return true;
 
 	buf[size] = '\0';
 	msg_send(ctx, buf, con->name);
 
 	prepare_prompt(prompt, sizeof prompt, ctx->jid);
 	if (write(con->out, prompt, strlen(prompt)) == -1) return false;
-	if (write(con->out, buf, size) == -1) return false;
+	if (write(con->out, buf, strlen(buf)) == -1) return false;
 	if (write(con->out, "\n", 1) == -1) return false;
 
 	return true;
@@ -330,7 +342,7 @@ main(int argc, char *argv[])
 		/* check for input from server */
 		if (FD_ISSET(ctx.fd_in, &readfds)) {
 			char buf[BUFSIZ];
-			if ((n = read(ctx.fd_in, buf, BUFSIZ)) < 0) goto err;
+			if ((n = read(ctx.fd_in, buf, BUFSIZ)) <= 0) goto err;
 			bxml_add_buf(ctx.bxml, buf, n);
 			sel--;
 		}
@@ -338,7 +350,7 @@ main(int argc, char *argv[])
 		/* check for input form in-files */
 		LIST_FOREACH(c, &ctx.roster, next)
 			if (FD_ISSET(c->fd, &readfds))
-				send_message(&ctx, c);
+				if (send_message(&ctx, c) == false) goto err;
 	}
  err:
 	if (errno != 0)
