@@ -14,10 +14,37 @@ The program "sj" just do a few things:
   * opens a connection with an XMPP server
   * do authentication (+binding +session registration)
   * perfoms keep-alive pings to the server
-  * segmenting tags and routing them to other software daemons:
+  * segmenting tags and routing them to other daemons:
     * presenced
     * messaged
     * iqd
+
+## usage
+
+```sh
+# set base directory
+export SJ_DIR=/home/user/.xmpp
+
+# start daemon
+sj -u user -s server.org -r resources &
+password:
+
+# set presence to 'online'
+presence
+
+# add a contact to your roster
+roster -a other@server.com
+
+# subscribe his online status
+presence -to other@server.com subscribe
+
+# let him see your online status
+presence -to other@server.com subscribed
+
+# view buddies on your roster
+roster
+other@server.org                both    flow
+```
 
 ## TODO
 
