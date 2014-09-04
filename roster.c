@@ -78,7 +78,7 @@ list(mxml_node_t *iq)
 void
 usage(void)
 {
-	fprintf(stderr, "roster [-d <dir>] -l\n");
+	fprintf(stderr, "roster [-d <dir>]\n");
 	fprintf(stderr, "roster [-d <dir>] [-n <name>] [-g group] -a <jid>\n");
 	fprintf(stderr, "roster [-d <dir>] -r <jid>\n");
 	exit(EXIT_FAILURE);
@@ -89,9 +89,9 @@ main(int argc, char *argv[])
 {
 	FILE *fh = NULL;
 	int ch;
-	bool list_flag = false;
 	bool add_flag = false;
 	bool remove_flag = false;
+	bool list_flag = false;
 	char path_out[PATH_MAX];
 	char path_in[PATH_MAX];
 	char *dir = getenv("SJ_DIR");
@@ -109,9 +109,6 @@ main(int argc, char *argv[])
 			break;
 		case 'n':
 			if ((name = strdup(optarg)) == NULL) goto err;
-			break;
-		case 'l':
-			list_flag = true;
 			break;
 		case 'a':
 			add_flag = true;
@@ -149,11 +146,6 @@ main(int argc, char *argv[])
 
 	if (add_flag && jid != NULL) {
 		add(fh, jid, name, group);
-	} else if (list_flag) {
-		if (fprintf(fh,
-		    "<iq type='get' id='roster-%d'>"
-			"<query xmlns='jabber:iq:roster'/>"
-		    "</iq>", getpid()) == -1) goto err;
 	} else if (remove_flag && jid != NULL) {
 		if (fprintf(fh,
 		    "<iq type='set' id='roster-%d'>"
@@ -162,7 +154,11 @@ main(int argc, char *argv[])
 			"</query>"
 		    "</iq>", getpid(), jid) == -1) goto err;
 	} else {
-		usage();
+		list_flag = true;
+		if (fprintf(fh,
+		    "<iq type='get' id='roster-%d'>"
+			"<query xmlns='jabber:iq:roster'/>"
+		    "</iq>", getpid()) == -1) goto err;
 	}
 
 	if (fclose(fh) == EOF) goto err;
