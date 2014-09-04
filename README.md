@@ -33,7 +33,7 @@ password:
 presence
 
 # add a contact to your roster
-roster -a other@server.com
+roster -a other@server.com -n joe
 
 # subscribe his online status
 presence -to other@server.com subscribe
@@ -43,7 +43,7 @@ presence -to other@server.com subscribed
 
 # view buddies on your roster
 roster
-other@server.org                both    flow
+other@server.org                both    joe
 ```
 
 ## TODO
