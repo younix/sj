@@ -391,7 +391,7 @@ main(int argc, char**argv)
 	for (;;) {
 		char buf[BUFSIZ];
 		ssize_t n = 0;
-		struct timeval tv = {60, 0}; /* interval for keep alive pings */
+		struct timeval tv = {30, 0}; /* interval for keep alive pings */
 		fd_set readfds;
 
 		FD_ZERO(&readfds);
