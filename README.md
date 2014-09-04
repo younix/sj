@@ -54,6 +54,7 @@ other@server.org                both    joe
   * ~~replace linked list with one of queue.h~~
   * write front end tools
   * write manpages for all tools
+  * messaged: convert xml-tags into entities
 
 ## required
 
