@@ -51,7 +51,7 @@ void
 usage(void)
 {
 	fprintf(stderr,
-		"presence [-d <dir>] [-t <to>] [-s <show>] [-p <prio>] type\n"
+		"presence [-d <dir>] [-t <to>] [-s <show>] [-p <prio>] [type]\n"
 		"  prio: -128..127\n"
 		"  show: away|chat|dnd|xa\n"
 		"  type: subscribe|subscribed|unavailable|unsubscribe|"
@@ -70,7 +70,9 @@ main(int argc, char *argv[])
 	char *to = NULL;
 	char *show = NULL;
 	char *status = NULL;
+	char *type = NULL;
 	signed int priority = 0;
+	char type_str[BUFSIZ];
 	char to_str[BUFSIZ];
 	char show_str[BUFSIZ];
 	char status_str[BUFSIZ];
@@ -106,17 +108,17 @@ main(int argc, char *argv[])
 	argc -= optind;
 	argv += optind;
 
-	if (argc != 1)
-		usage();
-
-	char *type = argv[0];
-	if (istype(type) == false)
-		usage();
+	if (argc == 1) {
+		type = argv[0];
+		if (istype(type) == false)
+			usage();
+	}
 
 	if (dir == NULL)
 		usage();
 
 	snprintf(to_str, sizeof to_str, "to='%s'", to);
+	snprintf(type_str, sizeof type_str, "type='%s'", type);
 	snprintf(show_str, sizeof show_str, "<show>%s</show>", show);
 
 	/* send query to server */
@@ -124,13 +126,13 @@ main(int argc, char *argv[])
 	if ((fh = fopen(path_out, "w")) == NULL) goto err;
 
 	if (fprintf(fh,
-	    "<presence id='presence-%d' type='%s' %s>"
+	    "<presence id='presence-%d' %s %s>"
 		"<priority>%d</priority>"
 		"%s %s"
 	    "</presence>",
 	    getpid(),
-	    type,
 	    to       == NULL ? "" : to_str,
+	    type     == NULL ? "" : type_str,
 	    priority,
 	    show     == NULL ? "" : show_str,
 	    status   == NULL ? "" : status_str) == -1) goto err;
