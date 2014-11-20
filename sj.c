@@ -14,6 +14,13 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/time.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+
 #include <assert.h>
 #include <err.h>
 #include <errno.h>
@@ -31,14 +38,6 @@
 #else
 #	include <readpassphrase.h>
 #endif
-
-
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/time.h>
-#include <sys/types.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 
 #include <mxml.h>
 
@@ -323,11 +322,16 @@ usage(void)
 	fprintf(stderr, "usage: sj OPTIONS\n"
 		"OPTIONS:\n"
 		"\t-u <user>\n"
-		"\t-H <host>\n"
 		"\t-s <server>\n"
 		"\t-r <resource>\n"
 		"\t-d <directory>\n");
 	exit(EXIT_FAILURE);
+}
+
+void
+sig_handler(int i)
+{
+	fprintf(stderr, "%d", i);
 }
 
 int
@@ -388,6 +392,8 @@ main(int argc, char**argv)
 	init_dir(&ctx);
 	xmpp_init(&ctx);
 
+	signal(SIGHUP, sig_handler);
+
 	for (;;) {
 		char buf[BUFSIZ];
 		ssize_t n = 0;
@@ -403,11 +409,14 @@ main(int argc, char**argv)
 			max_fd = MAX(max_fd, ctx.fd_in);
 		}
 
+		errno = 0;
 		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
+		if (sel == -1) goto err;
 
 		/* data from xmpp server */
 		if (FD_ISSET(READ_FD, &readfds)) {
 			if ((n = read(READ_FD, buf, BUFSIZ)) < 0) goto err;
+			if (n == 0) break;	/* connection closed */
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
@@ -417,6 +426,7 @@ main(int argc, char**argv)
 			xmpp_ping(&ctx);
 		}
 	}
+	return EXIT_SUCCESS;
  err:
 	perror(__func__);
 	return EXIT_FAILURE;
