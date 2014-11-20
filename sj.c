@@ -426,8 +426,13 @@ main(int argc, char**argv)
 			xmpp_ping(&ctx);
 		}
 	}
-	return EXIT_SUCCESS;
  err:
-	perror(__func__);
-	return EXIT_FAILURE;
+	/* close messaged and iqd */
+	if (ctx.fh_msg != NULL) pclose(ctx.fh_msg);
+	if (ctx.fh_iq  != NULL) pclose(ctx.fh_iq);
+
+	if (errno != 0)
+		perror(__func__);
+
+	return EXIT_SUCCESS;
 }

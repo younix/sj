@@ -134,9 +134,11 @@ main(int argc, char *argv[])
 		if (FD_ISSET(ctx.fd_in, &readfds)) {
 			char buf[BUFSIZ];
 			if ((n = read(ctx.fd_in, buf, BUFSIZ)) < 0) goto err;
+			if (n == 0) break;	/* connection closed */
 			bxml_add_buf(ctx.bxml, buf, n);
 		}
 	}
+	return EXIT_SUCCESS;
  err:
 	if (errno != 0)
 		perror(NULL);
