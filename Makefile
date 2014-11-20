@@ -3,7 +3,9 @@ CC ?= cc
 DEFINES	:= $(DEFINES) -D_POSIX_C_SOURCE=201405L -D_XOPEN_SOURCE=700
 DEFINES	:= $(DEFINES) -D_BSD_SOURCE
 
-CFLAGS	:= -std=c99 -pedantic -Wall -Wextra -O3 -g $(DEFINES)
+DEBUG	:= -g
+LDFLAGS	:=
+CFLAGS	:= -std=c99 -pedantic -Wall -Wextra -O3 $(DEBUG) $(DEFINES)
 CFLAGS_MXML := `pkg-config --cflags mxml`
 LIBS_MXML := `pkg-config --libs mxml`
 
@@ -15,24 +17,24 @@ BINS=sj messaged iqd roster presence
 all: $(BINS)
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LIBS_MXML) $(LIBS_BSD) -lm \
+	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) -lm \
 	    sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 
 messaged: messaged.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LIBS_MXML) $(LIBS_BSD) messaged.o bxml/bxml.o
+	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) messaged.o bxml/bxml.o
 
 iqd: iqd.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LIBS_MXML) iqd.o bxml/bxml.o
+	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) iqd.o bxml/bxml.o
 
 roster: roster.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LIBS_MXML) roster.o
+	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) roster.o
 
 presence: presence.o
 	@echo "Build: $@"
-	@$(CC) -o $@ presence.o
+	@$(CC) -o $@ $(LDFLAGS) presence.o
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	@echo "Build: $@"
