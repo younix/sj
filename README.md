@@ -55,6 +55,13 @@ other@server.org                both    joe
   * write front end tools
   * write manpages for all tools
   * messaged: convert xml-tags into entities
+  * create of accounts in-band
+  * change passwords
+
+  * XEP-0077: In-Band Registration
+  * XEP-0030: Service Discovery
+  * XEP-0012: Last Activity
+  * XEP-0202: Entity Time
 
 ## required
 
