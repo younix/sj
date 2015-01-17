@@ -88,6 +88,7 @@ int
 main(int argc, char *argv[])
 {
 	FILE *fh = NULL;
+	int fd;
 	int ch;
 	bool add_flag = false;
 	bool remove_flag = false;
@@ -164,9 +165,10 @@ main(int argc, char *argv[])
 	if (fclose(fh) == EOF) goto err;
 
 	/* read answer from server */
-	if ((fh = fopen(path_in, "r")) == NULL) goto err;
-	mxmlLoadFile(tree, fh, MXML_NO_CALLBACK);
-	if (fclose(fh) == EOF) goto err;
+	if ((fd = open(path_in, O_RDONLY )) == -1) goto err;
+	if (fcntl(fd, F_SETFL, O_NONBLOCK) == -1) goto err;
+	mxmlLoadFd(tree, fd, MXML_NO_CALLBACK);
+	if (close(fd) == -1) goto err;
 	if (unlink(path_in) == -1) goto err;
 
 	if (list_flag)
