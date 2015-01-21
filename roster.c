@@ -1,5 +1,5 @@
 /*
- * Copyright (c) Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2014-2015 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
