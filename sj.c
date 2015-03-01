@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2013-2015 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -350,7 +350,7 @@ main(int argc, char**argv)
 	ctx.resource = getenv("SJ_RESOURCE");
 	ctx.dir      = getenv("SJ_DIR");
 
-	while ((ch = getopt(argc, argv, "d:s:u:p:r:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:s:u:r:")) != -1) {
 		switch (ch) {
 		case 'd':
 			ctx.dir = strdup(optarg);

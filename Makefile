@@ -12,9 +12,11 @@ LIBS_MXML := `pkg-config --libs mxml`
 .PHONY: all test clean debug update install
 .SUFFIXES: .o .c
 
-BINS=sj messaged iqd roster presence
+BINS=sj messaged presenced iqd roster presence
 
 all: $(BINS)
+
+# core deamon
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 	@echo "Build: $@"
 	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) -lm \
@@ -24,10 +26,15 @@ messaged: messaged.o bxml/bxml.o
 	@echo "Build: $@"
 	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) messaged.o bxml/bxml.o
 
+presenced: presenced.o bxml/bxml.o
+	@echo "Build: $@"
+	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) presenced.o bxml/bxml.o
+
 iqd: iqd.o bxml/bxml.o
 	@echo "Build: $@"
 	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) iqd.o bxml/bxml.o
 
+# commandline tools
 roster: roster.o
 	@echo "Build: $@"
 	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) roster.o
@@ -43,6 +50,10 @@ sj.o: sj.c bxml/bxml.h sasl/sasl.h
 messaged.o: messaged.c bxml/bxml.h
 	@echo "Build: $@"
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ messaged.c
+
+presenced.o: presenced.c bxml/bxml.h
+	@echo "Build: $@"
+	@$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ presenced.c
 
 iqd.o: iqd.c bxml/bxml.h
 	@echo "Build: $@"

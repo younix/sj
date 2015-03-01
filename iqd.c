@@ -99,7 +99,7 @@ main(int argc, char *argv[])
 	struct context ctx = NULL_CONTEXT;
 	int ch;
 
-	while ((ch = getopt(argc, argv, "j:d:o:i:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:i:")) != -1) {
 		switch (ch) {
 		case 'i':
 			ctx.fd_in = strtol(optarg, NULL, 0);
