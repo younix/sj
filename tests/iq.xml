@@ -1,0 +1,3 @@
+<iq id="1234">
+	<test value="Lorem ipsum dolor sit amet" />
+</iq>
