@@ -53,8 +53,8 @@
 #endif
 
 /* ucspi */
-#define WRITE_FD 6
-#define READ_FD 7
+#define WRITE_FD 7
+#define READ_FD 6
 
 /* XMPP session states */
 enum xmpp_state {OPEN, AUTH, BIND_OUT, BIND, SESSION};
@@ -267,6 +267,10 @@ server_tag(char *tag, void *data)
 		start_sub_proccess(ctx);
 		goto out;
 	}
+
+	/* handling error messages */
+	if (strcmp("failure", tag_name) == 0)
+		errx(EXIT_FAILURE, "%s", tag);
 
 	/* send message tags to message process */
 	if (ctx->fh_msg != NULL && strcmp("message", tag_name) == 0) {
