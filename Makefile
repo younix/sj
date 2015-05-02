@@ -84,5 +84,8 @@ install:
 	mkdir -p ${HOME}/bin
 	cp $(BINS) ${HOME}/bin
 
+test: all
+	cd tests && test.sh
+
 include bxml/Makefile.inc
 include sasl/Makefile.inc
