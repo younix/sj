@@ -77,14 +77,18 @@ recv_presence(char *tag, void *data)
 
 	/* cut off resourcepart from jabber ID */
 	if ((slash = strchr(from, '/')) != NULL)
-		slash = '\0';
+		*slash = '\0';
 
-	if (mkdir(ctx->dir, S_IRUSR|S_IWUSR|S_IXUSR) == -1)
+	if (mkdir(ctx->dir, S_IRUSR|S_IWUSR|S_IXUSR) == -1) {
 		if (errno != EEXIST) err(EXIT_FAILURE, "mkdir");
+		errno = 0;
+	}
 
 	snprintf(path, sizeof path, "%s/%s", ctx->dir, from);
-	if (mkdir(path, S_IRUSR|S_IWUSR|S_IXUSR) == -1)
+	if (mkdir(path, S_IRUSR|S_IWUSR|S_IXUSR) == -1) {
 		if (errno != EEXIST) err(EXIT_FAILURE, "mkdir");
+		errno = 0;
+	}
 
 	snprintf(path, sizeof path, "%s/%s/status", ctx->dir, from);
 	if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR)) == -1)
