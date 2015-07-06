@@ -198,6 +198,7 @@ recv_message(char *tag, void *data)
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
 	const char *from = NULL;
+	const char *slash = NULL;
 	char prompt[BUFSIZ];
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
@@ -212,6 +213,9 @@ recv_message(char *tag, void *data)
 	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
 		goto err;
 
+	/* cut off resourcepart from jabber ID */
+	if ((slash = strchr(from, '/')) != NULL)
+		slash = '\0';
 	prepare_prompt(prompt, sizeof prompt, from);
 
 	/* try to find contact for this message in roster */

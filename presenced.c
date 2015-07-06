@@ -58,6 +58,7 @@ recv_presence(char *tag, void *data)
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
 	const char *from = NULL;
+	char *slash = NULL;
 	char path[PATH_MAX];
 	int fd;
 
@@ -73,6 +74,10 @@ recv_presence(char *tag, void *data)
 
 	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
 		goto err;
+
+	/* cut off resourcepart from jabber ID */
+	if ((slash = strchr(from, '/')) != NULL)
+		slash = '\0';
 
 	if (mkdir(ctx->dir, S_IRUSR|S_IWUSR|S_IXUSR) == -1)
 		if (errno != EEXIST) err(EXIT_FAILURE, "mkdir");
