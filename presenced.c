@@ -36,16 +36,174 @@
 
 #include "bxml/bxml.h"
 
+struct contact {
+	char *jid;		/* buddies jabber ID */
+	char path[PATH_MAX];	/* path to buddy specific status file */
+	char *mystatus;		/* buddy specific status message */
+	LIST_ENTRY(contact) next;
+};
+
 struct context {
 	int fd_in;
 	struct bxml_ctx *bxml;
 	char *dir;
+	char out_file[PATH_MAX];
+	LIST_HEAD(listhead, contact) roster;
 };
 
 #define NULL_CONTEXT {		\
 	STDIN_FILENO,		\
 	NULL,			\
-	"."			\
+	".",			\
+	{0},			\
+	LIST_HEAD_INITIALIZER()	\
+}
+
+static void
+send_presence(const struct context *ctx, const struct contact *c)
+{
+	FILE *fh = NULL;
+
+	if (ctx == NULL || c == NULL)
+		return;
+
+	if (c->mystatus == NULL)
+		return;
+
+	if ((fh = fopen(ctx->out_file, "w")) == NULL)
+		goto err;
+
+	if (fprintf(fh,
+		"<presence to='%s'>"
+			"<status>%s</status>"
+			"<priority>1</priority>"
+		"</presence>", c->jid, c->mystatus) == -1)
+		goto err;
+
+	if (fclose(fh) == EOF)
+		goto err;
+	return;
+ err:
+	if (errno != 0)
+		perror(__func__);
+}
+
+static void
+check_contact(struct context *ctx, struct contact *c)
+{
+	FILE *fh;
+	char buf[BUFSIZ];
+
+	if (c == NULL)
+		return;
+
+	if ((fh = fopen(c->path, "r")) == NULL) {
+		if (errno == ENOENT) {
+			errno = 0;
+			if (c->mystatus != NULL) {
+				free(c->mystatus);
+				c->mystatus = NULL;
+				send_presence(ctx, c);
+			}
+			return;
+		}
+		goto err;
+	}
+
+	if (fgets(buf, sizeof buf, fh) == NULL) {
+		/* distinguish between empty file and error */
+		if (feof(fh))
+			buf[0] = '\0';
+		else
+			goto err;
+	}
+
+	if (c->mystatus != NULL) {
+		if (strncmp(buf, c->mystatus, sizeof c->mystatus) != 0) {
+			free(c->mystatus);
+			c->mystatus = strdup(buf);
+			send_presence(ctx, c);
+		}
+	} else {
+		c->mystatus = strdup(buf);
+		send_presence(ctx, c);
+	}
+
+	if (fclose(fh) == EOF)
+		goto err;
+	return;
+ err:
+	if (errno != 0)
+		perror(__func__);
+}
+
+static void
+free_contact(struct contact *c)
+{
+	if (c == NULL) return;
+	free(c->jid);
+	free(c);
+}
+
+static struct contact *
+add_contact(struct context *ctx, char *jid)
+{
+	char *slash = NULL;
+	struct contact *c = NULL;
+
+	/* just handle the bare jabber id without resources */
+	if ((slash = strchr(jid, '/')) != NULL)
+		*slash = '\0';
+
+	/* return contact if it exists already */
+	LIST_FOREACH(c, &ctx->roster, next)
+		if (strcmp(c->jid, jid) == 0)
+			return c;
+
+	/* create a new contact */
+	if ((c = calloc(1, sizeof *c)) == NULL) goto err;
+	if ((c->jid = strdup(jid)) == NULL) goto err;
+
+	/* prepare path of "mystatus" file */
+	if (snprintf(c->path, sizeof c->path, "%s/%s/mystatus",
+	    ctx->dir, c->jid) == 0)
+		goto err;
+
+	LIST_INSERT_HEAD(&ctx->roster, c, next);
+
+	return c;
+ err:
+	free_contact(c);
+	if (errno != 0)
+		perror(__func__);
+	return NULL;
+}
+
+static void
+check_roster(struct context *ctx)
+{
+	DIR *dirp;
+	struct dirent *dp;
+	struct contact *c;
+
+	if (ctx->dir == NULL) return;
+	if ((dirp = opendir(ctx->dir)) == NULL) goto err;
+
+	while ((dp = readdir(dirp)) != NULL) {
+		if (strcmp(dp->d_name, ".") == 0 ||
+		    strcmp(dp->d_name, "..") == 0 ||
+		    dp->d_type != DT_DIR) continue;
+
+		if ((c = add_contact(ctx, dp->d_name)) != NULL)
+			check_contact(ctx, c);
+	}
+
+	closedir(dirp);
+	return;
+ err:
+	if (errno != 0)
+		perror(__func__);
+	return;
 }
 
 static void
@@ -55,6 +213,7 @@ recv_presence(char *tag, void *data)
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
 	static mxml_node_t *node = NULL;
+	static mxml_node_t *status = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
 	const char *from = NULL;
@@ -91,11 +250,26 @@ recv_presence(char *tag, void *data)
 	}
 
 	snprintf(path, sizeof path, "%s/%s/status", ctx->dir, from);
-	if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR)) == -1)
-		goto err;
-	/* write text of status-tag into this file */
-	if (write(fd, tag, strlen(tag)) == -1) goto err;
-	if (close(fd) == -1) goto err;
+
+	status = mxmlFindElement(node, tree, "status", NULL, NULL,
+	    MXML_DESCEND_FIRST);
+
+	if (status != NULL) {
+		if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR))
+		    == -1)
+			goto err;
+		/* write text of status-tag into this file */
+		/* concatinate all text peaces */
+		for (mxml_node_t *txt = status->child; txt != NULL;
+				txt = mxmlGetNextSibling(txt)) {
+			int space = 0;
+			const char *t = mxmlGetText(txt, &space);
+			if (space == 1)
+				write(fd, " ", 1);
+			if (write(fd, t, strlen(t)) == -1) goto err;
+		}
+		if (close(fd) == -1) goto err;
+	}
  err:
 	if (errno != 0)
 		perror(__func__);
@@ -130,6 +304,10 @@ main(int argc, char *argv[])
 	}
 	argc -= optind;
 	argv += optind;
+
+	snprintf(ctx.out_file, sizeof ctx.out_file, "%s/in", ctx.dir);
+
+	check_roster(&ctx);
 
 	/* initialize block parser and set callback function */
 	ctx.bxml = bxml_ctx_init(recv_presence, &ctx);
