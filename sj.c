@@ -80,6 +80,7 @@ struct context {
 
 	/* frontend daemon */
 	FILE *fh_msg;
+	FILE *fh_pre;
 	FILE *fh_iq;
 };
 
@@ -95,6 +96,7 @@ struct context {
 	-1,	/* int fd_in; */		\
 	OPEN,	/* enum xmpp_stat; */		\
 	NULL,	/* FILE *fh_msg; */		\
+	NULL,	/* FILE *fh_pre; */		\
 	NULL	/* FILE *fh_iq; */		\
 }
 
@@ -186,6 +188,9 @@ start_sub_proccess(struct context *ctx)
 	    ctx->user, ctx->server, ctx->dir);
 	if ((ctx->fh_msg = popen(cmd, "w")) == NULL) goto err;
 
+	snprintf(cmd, sizeof cmd, "presenced -d %s", ctx->dir);
+	if ((ctx->fh_pre = popen(cmd, "w")) == NULL) goto err;
+
 	snprintf(cmd, sizeof cmd, "iqd -d %s", ctx->dir);
 	if ((ctx->fh_iq = popen(cmd, "w")) == NULL) goto err;
 
@@ -272,10 +277,17 @@ server_tag(char *tag, void *data)
 	if (strcmp("failure", tag_name) == 0)
 		errx(EXIT_FAILURE, "%s", tag);
 
-	/* send message tags to message process */
+	/* send message tags to messaged process */
 	if (ctx->fh_msg != NULL && strcmp("message", tag_name) == 0) {
 		if (fputs(tag, ctx->fh_msg) == EOF) goto err;
 		if (fflush(ctx->fh_msg) == EOF) goto err;
+		goto out;
+	}
+
+	/* send presence tags to presenced process */
+	if (ctx->fh_pre != NULL && strcmp("presence", tag_name) == 0) {
+		if (fputs(tag, ctx->fh_pre) == EOF) goto err;
+		if (fflush(ctx->fh_pre) == EOF) goto err;
 		goto out;
 	}
 
@@ -431,8 +443,9 @@ main(int argc, char**argv)
 		}
 	}
  err:
-	/* close messaged and iqd */
+	/* close messaged, pressenced and iqd */
 	if (ctx.fh_msg != NULL) pclose(ctx.fh_msg);
+	if (ctx.fh_pre != NULL) pclose(ctx.fh_pre);
 	if (ctx.fh_iq  != NULL) pclose(ctx.fh_iq);
 
 	if (errno != 0)
