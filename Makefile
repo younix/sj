@@ -9,7 +9,7 @@ CFLAGS	:= -std=c99 -pedantic -Wall -Wextra -O3 $(DEBUG) $(DEFINES)
 CFLAGS_MXML := `pkg-config --cflags mxml`
 LIBS_MXML := `pkg-config --libs mxml`
 
-.PHONY: all test clean debug update install
+.PHONY: all tests clean debug update install
 .SUFFIXES: .o .c
 
 BINS=sj messaged presenced iqd roster presence
@@ -84,7 +84,7 @@ install:
 	mkdir -p ${HOME}/bin
 	cp $(BINS) ${HOME}/bin
 
-test: all
+tests:
 	cd tests && test.sh
 
 include bxml/Makefile.inc
