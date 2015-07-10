@@ -43,6 +43,15 @@ presence: presence.o
 	@echo "Build: $@"
 	@$(CC) -o $@ $(LDFLAGS) presence.o
 
+# extensions
+xmpp:time: xmpp:time.o
+	@echo "Build: $@"
+	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) xmpp:time.o
+
+xmpp:time.o: xmpp:time.c
+	@echo "Build: $@"
+	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ xmpp:time.c
+
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	@echo "Build: $@"
 	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
