@@ -52,26 +52,41 @@ static void
 recv_iq(char *tag, void *data)
 {
 	struct context *ctx = data;
-	/* HACK: we need this, cause mxml can't parse tags by itself */
-	static mxml_node_t *tree = NULL;
-	static mxml_node_t *node = NULL;
-	const char *base = "<?xml ?><stream:stream></stream:stream>";
+	mxml_node_t *node = NULL;
 	const char *tag_name = NULL;
+	const char *tag_type = NULL;
 	const char *tag_id = NULL;
+	const char *tag_ns = NULL;
 	char path[PATH_MAX];
 	int fd;
 
-	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
-	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
-	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
+	if ((node = mxmlLoadString(NULL, tag, MXML_NO_CALLBACK)) == NULL)
+		err(EXIT_FAILURE, "%s: unable to load xml tag", __func__);
 
-	if (tree->child->next == NULL) goto err;
-	node = tree->child->next;
 	if ((tag_name = mxmlGetElement(node)) == NULL) goto err;
-	if (strcmp("iq", tag_name) != 0)
+	if (strcmp("iq", tag_name) != 0) goto err;
+
+	if ((tag_type = mxmlElementGetAttr(node, "type")) == NULL)
 		goto err;
 
-	if ((tag_id = mxmlElementGetAttr(tree->child->next, "id")) == NULL)
+	/* handle get */
+	if (strcmp(tag_type, "get") == 0) {
+		if ((tag_ns = mxmlElementGetAttr(node->child, "xmlns")) == NULL)
+			goto err;
+
+		fprintf(stderr, "xmlns: %s\n", tag_ns);
+
+		if (strncmp(tag_ns, "http://jabber.org/protocol/", 27) == 0)
+			return;
+
+		return;
+	}
+
+	/* just handle results */
+	if (strcmp(tag_type, "result") != 0)
+		return;
+
+	if ((tag_id = mxmlElementGetAttr(node, "id")) == NULL)
 		goto err;
 
 	snprintf(path, sizeof path, "%s/%s", ctx->dir, tag_id);
@@ -83,7 +98,7 @@ recv_iq(char *tag, void *data)
  err:
 	if (errno != 0)
 		perror(__func__);
-	mxmlDelete(tree->child->next);
+	mxmlDelete(node);
 }
 
 static void
