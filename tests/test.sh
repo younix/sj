@@ -2,7 +2,7 @@
 
 . ./tap-functions -u
 
-plan_tests 9
+plan_tests 10
 
 # prepare
 
@@ -37,6 +37,9 @@ ok $? "messaged create out file"
 
 test -p "$tmpdir/alice@server.org/in"
 ok $? "messaged create in file as named pipe"
+
+grep -q '^....-..-.. ..:.. <eve@server.org> $' "$tmpdir/eve@server.org/out"
+ok $? "empty messages are accepted"
 
 #
 # presenced tests

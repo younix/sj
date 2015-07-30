@@ -195,24 +195,23 @@ recv_message(char *tag, void *data)
 	struct contact *c = NULL;
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
-	const char *base = "<?xml ?><stream:stream></stream:stream>";
+	mxml_node_t *node = NULL;
+	mxml_node_t *body = NULL;
+	const char *base = "<?xml ?>";
 	const char *tag_name = NULL;
 	const char *from = NULL;
 	char prompt[BUFSIZ];
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
-	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
+	if (tree == NULL) err(EXIT_FAILURE, "unable to read xml tag");
+
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
-
-	if (tree->child->next == NULL) goto err;
-	if ((tag_name = mxmlGetElement(tree->child->next)) == NULL) goto err;
-	if (strcmp("message", tag_name) != 0)
+	if ((node = tree->child) == NULL)
 		goto err;
 
-	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
-		goto err;
-
-	prepare_prompt(prompt, sizeof prompt, from);
+	if ((tag_name = mxmlGetElement(node)) == NULL) goto err;
+	if (strcmp("message", tag_name) != 0) goto err;
+	if ((from = mxmlElementGetAttr(node, "from")) == NULL) goto err;
 
 	/* try to find contact for this message in roster */
 	LIST_FOREACH(c, &ctx->roster, next)
@@ -223,30 +222,28 @@ recv_message(char *tag, void *data)
 	if (c == NULL)
 		c = add_contact(ctx, from);
 
-	if (tree->child->next->child == NULL) goto err;
-	for (mxml_node_t *node = tree->child->next->child; node != NULL;
-	    node = node->next) {
-		if ((tag_name = mxmlGetElement(node)) == NULL) continue;
-		if (strcmp(tag_name, "body") != 0) continue;
-		if (node->child == NULL) continue;
+	body = mxmlFindElement(node->child, tree, "body", NULL, NULL,
+	    MXML_NO_DESCEND);
+	if (body == NULL)
+		goto err;
 
-		write(c->out, prompt, strlen(prompt));
-		/* concatinate all text peaces */
-		for (mxml_node_t *txt = node->child; txt != NULL;
-		    txt = mxmlGetNextSibling(txt)) {
-			int space = 0;
-			const char *t = mxmlGetText(txt, &space);
-			if (space == 1)
-				write(c->out, " ", 1);
-			if (write(c->out, t, strlen(t)) == -1) goto err;
-		}
-		write(c->out, "\n", 1);
-		break;	/* we just look for the first body at the moment */
+	prepare_prompt(prompt, sizeof prompt, from);
+	write(c->out, prompt, strlen(prompt));
+
+	/* concatinate all text peaces */
+	for (mxml_node_t *txt = body->child; txt != NULL;
+	    txt = mxmlGetNextSibling(txt)) {
+		int space = 0;
+		const char *t = mxmlGetText(txt, &space);
+		if (space == 1)
+			write(c->out, " ", 1);
+		if (write(c->out, t, strlen(t)) == -1) goto err;
 	}
+	write(c->out, "\n", 1);
  err:
 	if (errno != 0)
 		perror(__func__);
-	mxmlDelete(tree->child->next);
+	mxmlDelete(tree->child);
 }
 
 static bool

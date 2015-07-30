@@ -2,3 +2,10 @@
 	<active xmlns='http://jabber.org/protocol/chatstates'/>
 	<body>Lorem ipsum dolor sit amet</body>
 </message>
+<message from='eve@server.org' to='bob@server.org' type='chat' id='12345'>
+	<active xmlns='http://jabber.org/protocol/chatstates'/>
+	<body></body>
+</message>
+<message from='eve@server.org' to='bob@server.org' type='chat' id='12345'>
+	<active xmlns='http://jabber.org/protocol/chatstates'/>
+</message>
