@@ -203,7 +203,7 @@ recv_message(char *tag, void *data)
 	char prompt[BUFSIZ];
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
-	if (tree == NULL) err(EXIT_FAILURE, "unable to read xml tag");
+	if (tree == NULL) err(EXIT_FAILURE, "unable to load xml base");
 
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
 	if ((node = tree->child) == NULL)

@@ -52,7 +52,10 @@ static void
 recv_iq(char *tag, void *data)
 {
 	struct context *ctx = data;
+	/* HACK: we need this, cause mxml can't parse tags by itself */
+	static mxml_node_t *tree = NULL;
 	mxml_node_t *node = NULL;
+	const char *base = "<?xml ?>";
 	const char *tag_name = NULL;
 	const char *tag_type = NULL;
 	const char *tag_id = NULL;
@@ -60,8 +63,12 @@ recv_iq(char *tag, void *data)
 	char path[PATH_MAX];
 	int fd;
 
-	if ((node = mxmlLoadString(NULL, tag, MXML_NO_CALLBACK)) == NULL)
-		err(EXIT_FAILURE, "%s: unable to load xml tag", __func__);
+	if (tree == NULL) tree = mxmlLoadString(tree, base, MXML_NO_CALLBACK);  
+	if (tree == NULL) err(EXIT_FAILURE, "unable to load xml base tag");
+
+	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
+	if ((node = tree->child) == NULL)
+		goto err;
 
 	if ((tag_name = mxmlGetElement(node)) == NULL) goto err;
 	if (strcmp("iq", tag_name) != 0) goto err;
@@ -73,8 +80,6 @@ recv_iq(char *tag, void *data)
 	if (strcmp(tag_type, "get") == 0) {
 		if ((tag_ns = mxmlElementGetAttr(node->child, "xmlns")) == NULL)
 			goto err;
-
-		fprintf(stderr, "xmlns: %s\n", tag_ns);
 
 		if (strncmp(tag_ns, "http://jabber.org/protocol/", 27) == 0)
 			return;
@@ -98,7 +103,7 @@ recv_iq(char *tag, void *data)
  err:
 	if (errno != 0)
 		perror(__func__);
-	mxmlDelete(node);
+	mxmlDelete(tree->child);
 }
 
 static void
