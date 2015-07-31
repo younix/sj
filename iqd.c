@@ -76,15 +76,44 @@ recv_iq(char *tag, void *data)
 	if ((tag_type = mxmlElementGetAttr(node, "type")) == NULL)
 		goto err;
 
-	/* handle get */
-	if (strcmp(tag_type, "get") == 0) {
-		if ((tag_ns = mxmlElementGetAttr(node->child, "xmlns")) == NULL)
+	/* handle get/set */
+	if (strcmp(tag_type, "get") == 0 || strcmp(tag_type, "set") == 0) {
+		struct stat sb;
+
+		fprintf(stderr, "get\n");
+
+		mxml_node_t *child = mxmlFindElement(node, tree, NULL,
+		    "xmlns", NULL, MXML_DESCEND);
+
+		if ((tag_ns = mxmlElementGetAttr(child, "xmlns")) == NULL)
 			goto err;
 
 		if (strncmp(tag_ns, "http://jabber.org/protocol/", 27) == 0)
 			return;
 
-		return;
+		snprintf(path, sizeof path, "%s/ext/%s", ctx->dir, tag_ns);
+		if (stat(path, &sb) == -1) {
+			if (errno == ENOENT)
+				goto err;
+			goto err;
+		}
+
+		if (S_ISREG(sb.st_mode) && sb.st_mode & S_IXUSR) {
+			/* pipe tag to 3th party extension program */
+			char cmd[BUFSIZ];
+			FILE *fh;
+
+			snprintf(cmd, sizeof cmd, "%s -d '%s'", path, ctx->dir);
+
+			if ((fh = popen(cmd, "w")) == NULL) goto err;
+			if (fwrite(tag, strlen(tag), 1, fh) == 0) goto err;
+			if (pclose(fh) == -1) goto err;
+		} else {
+			/* just write the tag into the non-executable file */
+			goto output;
+		}
+
+		goto out;
 	}
 
 	/* just handle results */
@@ -95,14 +124,17 @@ recv_iq(char *tag, void *data)
 		goto err;
 
 	snprintf(path, sizeof path, "%s/%s", ctx->dir, tag_id);
-
+ output:
 	if ((fd = open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR)) == -1)
 		goto err;
 	if (write(fd, tag, strlen(tag)) == -1) goto err;
 	if (close(fd) == -1) goto err;
  err:
 	if (errno != 0)
-		perror(__func__);
+		err(EXIT_FAILURE, "\n\n\n\n");
+//		perror(__func__);
+ out:
+	errno = 0;
 	mxmlDelete(tree->child);
 }
 
