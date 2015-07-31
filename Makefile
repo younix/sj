@@ -12,7 +12,7 @@ LIBS_MXML := `pkg-config --libs mxml`
 .PHONY: all tests clean debug update install
 .SUFFIXES: .o .c
 
-BINS=sj messaged presenced iqd roster presence
+BINS=sj messaged presenced iqd roster presence xmpp:time
 
 all: $(BINS)
 
