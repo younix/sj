@@ -48,7 +48,7 @@ main(int argc, char *argv[])
 	/* HACK: we need this, cause mxml can't parse pure tags */
 	mxml_node_t *tree = NULL;
 	mxml_node_t *node = NULL;
-	const char *base = "<?xml ?><stream:stream></stream:stream>";
+	const char *base = "<?xml ?>";
 	const char *id = NULL;
 	const char *from = NULL;
 	const char *type = NULL;
@@ -76,9 +76,9 @@ main(int argc, char *argv[])
 		err(EXIT_FAILURE, "unable to read xml tree");
 	mxmlLoadFile(tree, stdin, MXML_NO_CALLBACK); 
 
-	if (tree->child->next == NULL)
+	/* check iq tag */
+	if ((node = tree->child) == NULL)
 		errx(EXIT_FAILURE, "unable to parse xml data");
-	node = tree->child->next;
 
 	if ((id = mxmlElementGetAttr(node, "id")) == NULL)
 		errx(EXIT_FAILURE, "iq stanze has no \"id\" attribute");
