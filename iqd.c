@@ -80,8 +80,6 @@ recv_iq(char *tag, void *data)
 	if (strcmp(tag_type, "get") == 0 || strcmp(tag_type, "set") == 0) {
 		struct stat sb;
 
-		fprintf(stderr, "get\n");
-
 		mxml_node_t *child = mxmlFindElement(node, tree, NULL,
 		    "xmlns", NULL, MXML_DESCEND);
 
