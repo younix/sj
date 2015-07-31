@@ -2,7 +2,7 @@
 
 . ./tap-functions -u
 
-plan_tests 10
+plan_tests 11
 
 # prepare
 
@@ -16,11 +16,20 @@ tmpdir=$(mktemp -d sj_tests_XXXXXX)
 # iqd tests
 #
 
-$iqd -d $tmpdir < iq.xml
+# prepare
+mkdir "$tmpdir/ext"
+ln -s '../../../xmpp:time' "$tmpdir/ext/urn:xmpp:time"
+touch "$tmpdir/in"
+
+# start iqd with input
+cat iq.xml | $iqd -d $tmpdir
 ok $? "iqd starting and ending"
 
 test -s "$tmpdir/1234"
 ok $? "iqd tag delivery"
+
+test -s "$tmpdir/in"
+ok "$?" "xmpp:time response"
 
 #
 # messaged tests

@@ -1,15 +1,19 @@
 <iq id="1234" type="result">
 	<test xmlns="xmpp:test" value="Lorem ipsum dolor sit amet" />
 </iq>
+<iq type='get' xmlns='urn:blub'
+    from='romeo@montague.net/orchard'
+    to='juliet@capulet.com/balcony'
+    id='time_1'><time xmlns='urn:xmpp:time'/></iq>
 <iq type='get'
     from='romeo@montague.net/orchard'
     to='juliet@capulet.com/balcony'
     id='time_1'>
-  <time xmlns='urn:xmpp:time'/>
+	<time xmlns='urn:xmpp:time'/>
 </iq>
 <iq from='blub@jabber.org/roundabout'
     id='disco1'
     to='jabber.org'
-    type='get'>
+    type='err'>
   <query xmlns='http://jabber.org/protocol/disco#info'/>
 </iq>
