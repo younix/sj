@@ -86,7 +86,12 @@ recv_iq(char *tag, void *data)
 		if ((tag_ns = mxmlElementGetAttr(child, "xmlns")) == NULL)
 			goto err;
 
+		/* TODO: deal with this kind of namespaces */
 		if (strncmp(tag_ns, "http://jabber.org/protocol/", 27) == 0)
+			return;
+
+		/* filter namespaces with '..' to avoid exploitation */
+		if (strstr(tag_ns, "..") != NULL)
 			return;
 
 		snprintf(path, sizeof path, "%s/ext/%s", ctx->dir, tag_ns);
@@ -130,8 +135,7 @@ recv_iq(char *tag, void *data)
 	if (close(fd) == -1) goto err;
  err:
 	if (errno != 0)
-		err(EXIT_FAILURE, "\n\n\n\n");
-//		perror(__func__);
+		perror(__func__);
  out:
 	errno = 0;
 	mxmlDelete(tree->child);
