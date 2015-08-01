@@ -101,7 +101,8 @@ recv_iq(char *tag, void *data)
 			char cmd[BUFSIZ];
 			FILE *fh;
 
-			snprintf(cmd, sizeof cmd, "%s -d '%s'", path, ctx->dir);
+			snprintf(cmd, sizeof cmd, "exec %s -d '%s'", path,
+			    ctx->dir);
 
 			if ((fh = popen(cmd, "w")) == NULL) goto err;
 			if (fwrite(tag, strlen(tag), 1, fh) == 0) goto err;
