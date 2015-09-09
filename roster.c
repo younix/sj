@@ -26,7 +26,7 @@
 
 #include <mxml.h>
 
-bool
+static bool
 result(mxml_node_t *iq)
 {
 	if (iq == NULL) return false;
@@ -35,7 +35,7 @@ result(mxml_node_t *iq)
 	return true;
 }
 
-bool
+static bool
 add(FILE *fh, const char *jid, const char *name, const char *group)
 {
 	char group_str[BUFSIZ];
@@ -57,7 +57,7 @@ add(FILE *fh, const char *jid, const char *name, const char *group)
 	return false;
 }
 
-bool
+static bool
 list(mxml_node_t *iq)
 {
 	mxml_node_t *item = NULL;
@@ -75,7 +75,7 @@ list(mxml_node_t *iq)
 	return true;
 }
 
-void
+static void
 usage(void)
 {
 	fprintf(stderr, "roster [-d <dir>]\n");
