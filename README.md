@@ -2,6 +2,10 @@
 
 Simple jabber client based on ideas from "Irc It".
 
+Official website: http://klemkow.net/sj.html
+
+Paper of the [slcon2](http://suckless.org/conference/): http://klemkow.net/sj.pdf
+
 ## Goals
 
 The XMPP protocol is a monster and totally over engineered.  But you have to
