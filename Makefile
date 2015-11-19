@@ -12,45 +12,45 @@ LIBS_MXML := `pkg-config --libs mxml`
 .PHONY: all tests clean debug update install
 .SUFFIXES: .o .c
 
-BINS=sj messaged presenced iqd roster presence xmpp:time
+BINS=sj messaged presenced iqd roster presence xmpp_time
 
 all: $(BINS)
 
 # core deamon
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) -lm \
-	    sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
+	@$(CC) -o $@ $(LDFLAGS) sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o\
+	     $(LIBS_MXML) $(LIBS_BSD) -lm
 
 messaged: messaged.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) messaged.o bxml/bxml.o
+	@$(CC) -o $@ $(LDFLAGS) messaged.o bxml/bxml.o $(LIBS_MXML) $(LIBS_BSD)
 
 presenced: presenced.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) $(LIBS_BSD) presenced.o bxml/bxml.o
+	@$(CC) -o $@ $(LDFLAGS) presenced.o bxml/bxml.o $(LIBS_MXML) $(LIBS_BSD)
 
 iqd: iqd.o bxml/bxml.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) iqd.o bxml/bxml.o
+	@$(CC) -o $@ $(LDFLAGS) iqd.o bxml/bxml.o $(LIBS_MXML)
 
 # commandline tools
 roster: roster.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) roster.o
+	@$(CC) -o $@ $(LDFLAGS) roster.o $(LIBS_MXML)
 
 presence: presence.o
 	@echo "Build: $@"
 	@$(CC) -o $@ $(LDFLAGS) presence.o
 
 # extensions
-xmpp:time: xmpp:time.o
+xmpp_time: xmpp_time.o
 	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) $(LIBS_MXML) xmpp:time.o
+	@$(CC) -o $@ $(LDFLAGS) xmpp_time.o $(LIBS_MXML)
 
-xmpp:time.o: xmpp:time.c
+xmpp_time.o: xmpp_time.c
 	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ xmpp:time.c
+	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ xmpp_time.c
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
 	@echo "Build: $@"
