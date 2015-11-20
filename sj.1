@@ -3,15 +3,47 @@
 .Os
 .Sh NAME
 .Nm sj
-.Nd handling XMPP message tags
+.Nd XMPP client daemon
 .Sh SYNOPSIS
+tcpclient host port [tlsc] \\
 .Nm
-.Fl j Ar JID
-.Fl d Ar DIR
+.Op Fl d Ar dir
+.Op Fl r Ar res
+.Op Fl s Ar server
+.Op Fl u Ar user
 .Sh DESCRIPTION
 The
 .Nm
-is a client daemon to the xmpp chat protocoll.
+is a client daemon to the XMPP chat protocoll.
+It handle the protocol initiation, authentication and keep-alive pings.
+After an XMPP session is established
+.Nm
+starts
+.Xr messaged 1 ,
+.Xr presenced 1
+and
+.Xr iqd 1
+and delegated all corresponding stanzas through
+.Xr pipe 2
+to these daemons.
+.Nm
+exits
+if one of these pipes is widowed.
+.sp 1
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d Ar dir
+sets the path to
+.Ar dir .
+This option overrides the environment SJ_DIR.
+Default is the current working directory.
+.It Fl r Ar res
+sets the resource part of the users JID.
+.It Fl s Ar server
+sets the host part of the users JID.
+.It Fl u Ar user
+sets the username.
+.El
 .Sh ENVIRONMENT
 .Bl -tag -width SJ_PASSWORD
 .It Ev SJ_DIR
@@ -24,18 +56,20 @@ XMPP server domain name.
 Resources for this XMPP session.
 .El
 .Sh EXAMPLES
-export SJ_USER=alice
-export SJ_PASSWORD=xxxxx
-tcpclient jabber.org 5223 sslc sj
+tcpclient example.org 5223 tlsc sj -u user -s example.org
 .Sh SEE ALSO
 .Xr ii 1 ,
 .Xr iqd 1 ,
-.Xr messaged 1
+.Xr messaged 1 ,
+.Xr presenced 1 ,
+.Xr socks 1 ,
+.Xr tlsc 1
 .Sh STANDARDS
 XMPP CORE
 .%R RFC 6120 ,
 XMPP IM
-.%R RFC 6121
+.%R RFC 6121 ,
+.%R XEP-0199 XMPP Ping
 .Sh AUTHORS
 .An -nosplit
 The
