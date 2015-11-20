@@ -30,7 +30,7 @@ The program "sj" just do a few things:
 export SJ_DIR=/home/user/.xmpp
 
 # start daemon
-sj -u user -s server.org -r resources &
+tcpclient server.org 5223 tlsc sj -u user -s server.org -r resources &
 password:
 
 # set presence to 'online'
