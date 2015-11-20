@@ -1,5 +1,7 @@
 #!/usr/bin/env ksh
 
+export MALLOC_OPTIONS="S"
+
 . ./tap-functions -u
 
 plan_tests 11
