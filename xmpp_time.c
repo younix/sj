@@ -74,7 +74,7 @@ main(int argc, char *argv[])
 
 	if ((tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK)) == NULL)
 		err(EXIT_FAILURE, "unable to read xml tree");
-	mxmlLoadFile(tree, stdin, MXML_NO_CALLBACK); 
+	mxmlLoadFile(tree, stdin, MXML_NO_CALLBACK);
 
 	/* check iq tag */
 	if ((node = tree->child) == NULL)
