@@ -71,8 +71,8 @@ struct context {
 	char *id;
 
 	/* file system frontend */
+	char file[PATH_MAX];
 	char *dir;
-	int fd_out;
 	int fd_in;
 
 	/* state of the xmpp session */
@@ -91,8 +91,8 @@ struct context {
 	NULL,	/* char *server; */		\
 	NULL,	/* char *resource; */		\
 	NULL,	/* char *id; */			\
+	{0},					\
 	NULL,	/* char *dir; */		\
-	-1,	/* int fd_out; */		\
 	-1,	/* int fd_in; */		\
 	OPEN,	/* enum xmpp_stat; */		\
 	NULL,	/* FILE *fh_msg; */		\
@@ -307,29 +307,16 @@ server_tag(char *tag, void *data)
 }
 
 /*
- * This function creates and opens the files used as front end.
+ * Create front end fifo
  */
 static void
 init_dir(struct context *ctx)
 {
-	char file[PATH_MAX];
-
-	if (mkdir(ctx->dir, S_IRWXU) < 0 && errno != EEXIST) goto err;
-	snprintf(file, sizeof file, "%s/out", ctx->dir);
-	if ((ctx->fd_out = open(file, O_WRONLY|O_CREAT|O_TRUNC,
-	    S_IRUSR|S_IWUSR)) < 0) goto err;
-
-	snprintf(file, sizeof file, "%s/in", ctx->dir);
-	if (mkfifo(file, S_IRUSR|S_IWUSR) < 0 && errno != EEXIST) goto err;
-	if ((ctx->fd_in = open(file, O_RDONLY|O_NONBLOCK, 0)) < 0) goto err;
-
-	if (errno == EEXIST)
-		errno = 0;
-
-	return;
- err:
-	perror(__func__);
-	exit(EXIT_FAILURE);
+	snprintf(ctx->file, sizeof ctx->file, "%s/in", ctx->dir);
+	if (mkdir(ctx->dir, S_IRWXU) < 0 && errno != EEXIST)
+		err(EXIT_FAILURE, "mkdir");
+	if (mkfifo(ctx->file, S_IRUSR|S_IWUSR) == -1 && errno != EEXIST)
+		err(EXIT_FAILURE, "mkfifo");
 }
 
 static void
@@ -420,6 +407,11 @@ main(int argc, char**argv)
 		FD_SET(READ_FD, &readfds);
 		int max_fd = READ_FD;
 
+		/* re/open input fifo */
+		if (ctx.fd_in == -1 && (ctx.fd_in =
+		    open(ctx.file, O_RDONLY|O_NONBLOCK|O_CLOEXEC)) == -1)
+			goto err;
+
 		if (ctx.state == SESSION) {
 			FD_SET(ctx.fd_in, &readfds);
 			max_fd = MAX(max_fd, ctx.fd_in);
@@ -429,15 +421,22 @@ main(int argc, char**argv)
 		int sel = select(max_fd+1, &readfds, NULL, NULL, &tv);
 		if (sel == -1) goto err;
 
-		/* data from xmpp server */
-		if (FD_ISSET(READ_FD, &readfds)) {
+		if (FD_ISSET(READ_FD, &readfds)) { /* data from xmpp server */
 			if ((n = read(READ_FD, buf, BUFSIZ)) < 0) goto err;
 			if (n == 0) break;	/* connection closed */
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
 			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
-				if (write(WRITE_FD, buf, n) < n) goto err;
-			if (errno == EAGAIN) errno = 0;
+				if (write(WRITE_FD, buf, n) < n)
+					goto err;
+
+			if (n == 0) {	/* close input fifo on EOF */
+				if (close(ctx.fd_in) == -1)
+					goto err;
+				ctx.fd_in = -1;
+			} else if (n == -1 && errno != EAGAIN) {
+					goto err;
+			}
 		} else if (sel == 0 && ctx.state == SESSION) {
 			xmpp_ping(&ctx);
 		}
