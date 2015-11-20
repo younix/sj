@@ -1,4 +1,4 @@
-.Dd November 20, 2015
+.Dd November 21, 2015
 .Dt MESSAGED 1
 .Os
 .Sh NAME
@@ -6,24 +6,41 @@
 .Nd handling XMPP message tags
 .Sh SYNOPSIS
 .Nm
-.Op Fl i Ar FD
-.Op Fl o Ar FD
+.Op Fl d Ar dir
+.Op Fl i Ar fdin
+.Op Fl o Ar out
 .Fl j Ar JID
-.Fl d Ar DIR
 .Sh DESCRIPTION
 The
 .Nm
-utility processes xmpp message tags from STDIN.
+utility processes XMPP message stanzas from STDIN.
 It has a filesystem based front end like
 .Xr ii 1 .
-Users should not start this programm directly.
+Users should not start this program directly.
 .Xr sj 1
-runs it after a successful login.
+starts it after an XMPP session is successfully established.
+.sp 1
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl d Ar dir
+sets the base directory.
+Default is the current working directory.
+.It Fl i Ar fdin
+sets the file descriptor to read the XMPP message stanzas.
+Default it STDIN.
+.It Fl o Ar out
+sets the input file of the
+.Xr sj 1
+daemon.
+.It Fl j Ar JID
+sets the local JID.
+.El
 .Sh ENVIRONMENT
 .Ev SJ_DIR
 .Sh SEE ALSO
 .Xr ii 1 ,
 .Xr iqd 1 ,
+.Xr presenced 1 ,
 .Xr sj 1
 .Sh STANDARDS
 XMPP CORE
