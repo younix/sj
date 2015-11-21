@@ -1,4 +1,4 @@
-.Dd November 20, 2015
+.Dd November 21, 2015
 .Dt IQD 1
 .Os
 .Sh NAME
@@ -6,19 +6,33 @@
 .Nd handling XMPP iq tags
 .Sh SYNOPSIS
 .Nm
-.Op Fl i Ar FD
-.Op Fl o Ar FD
-.Fl j Ar JID
-.Fl d Ar DIR
+.Op Fl i Ar fdin 
+.Fl d Ar dir
 .Sh DESCRIPTION
 The
 .Nm
 utility processes xmpp iq tags from STDIN.
+It has a filesystem based front end for extension programs.
+Users should not start it directly.
+.Xr sj 1
+starts
+it after an XMPP session is successfully established.
+.sp
+The options are as follows:
+.Bl -tag -width Ds
+.It Fl i Ar fdin 
+sets the file descriptor to read the XMPP iq stanzs.
+Default is STDIN.
+.It Fl d Ar dir
+sets the base directory.
+Default is the current working directory.
+.El
 .Sh ENVIRONMENT
 .Ev SJ_DIR
 .Sh SEE ALSO
 .Xr ii 1 ,
 .Xr messaged 1 ,
+.Xr presenced 1 ,
 .Xr sj 1
 .Sh STANDARDS
 XMPP CORE
