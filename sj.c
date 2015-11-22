@@ -284,10 +284,9 @@ server_tag(char *tag, void *data)
 
 	/* starttls successful */
 	if (strcmp("proceed", tag_name) == 0) {
-		char *argv[argc0 + 2];
+		char *argv[argc0 + 1];
 		argv[0] = "tlsc";
-		argv[1] = "-C";	/* XXX: this have to be optional! */
-		memcpy(argv + 2, argv0, sizeof(argv) - 2);
+		memcpy(argv + 1, argv0, sizeof(argv) - 1);
 		execvp("tlsc", argv);
 		err(EXIT_FAILURE, "execv");
 	}
