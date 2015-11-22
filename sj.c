@@ -56,6 +56,9 @@
 #define WRITE_FD 7
 #define READ_FD 6
 
+char **argv0;
+int argc0;
+
 /* XMPP session states */
 enum xmpp_state {OPEN, AUTH, BIND_OUT, BIND, SESSION};
 
@@ -65,7 +68,6 @@ struct context {
 
 	/* connection information */
 	char *user;
-	char *pass;
 	char *server;
 	char *resource;
 	char *id;
@@ -87,7 +89,6 @@ struct context {
 #define NULL_CONTEXT {				\
 	NULL,	/* struct bxml_ctx; */		\
 	NULL,	/* char *user; */		\
-	NULL,	/* char *pass; */		\
 	NULL,	/* char *server; */		\
 	NULL,	/* char *resource; */		\
 	NULL,	/* char *id; */			\
@@ -150,14 +151,31 @@ static void
 xmpp_auth(struct context *ctx)
 {
 	char msg[BUFSIZ];
-	char *authstr = sasl_plain(ctx->user, ctx->pass);
+	char pass[BUFSIZ];
+
+	if ((readpassphrase("password: ", pass, sizeof pass, 0)) == NULL)
+		err(EXIT_FAILURE, "readpassphrase");
+
+	char *authstr = sasl_plain(ctx->user, pass);
 	int size = snprintf(msg, sizeof msg,
 		"<auth xmlns='urn:ietf:params:xml:ns:xmpp-sasl'"
 		" mechanism='PLAIN'>%s</auth>", authstr);
 
 	if (write(WRITE_FD, msg, size) < 0)
-		perror(__func__);;
+		perror(__func__);
+
+	explicit_bzero(pass, sizeof pass);
+	explicit_bzero(authstr, strlen(authstr));
+	explicit_bzero(msg, sizeof msg);
+
 	free(authstr);
+}
+
+static void
+send_tag(const char *tag)
+{
+	if (write(WRITE_FD, tag, strlen(tag)) < 0)
+		perror(__func__);
 }
 
 static void
@@ -213,6 +231,19 @@ has_attr(mxml_node_t *node, const char *attr, const char *value)
 	return strcmp(v, value) == 0 ? true : false;
 }
 
+static bool
+has_tag(mxml_node_t *node, const char *tag)
+{
+	if (node == NULL)
+		assert(true);
+
+	if (mxmlFindElement(node, node, tag, NULL, NULL, MXML_DESCEND_FIRST)
+	    == NULL)
+		return false;
+
+	return true;
+}
+
 /*
  * This callback function is called from bxml-lib if a whole xml-tag from
  * the xmpp-server is recieved.
@@ -239,13 +270,26 @@ server_tag(char *tag, void *data)
 
 	/* authentication and binding */
 	if (strcmp("stream:features", tag_name) == 0) {
-		if (ctx->state == OPEN)
+		if (has_tag(node, "starttls"))
+			send_tag("<starttls "
+			    "xmlns='urn:ietf:params:xml:ns:xmpp-tls'/>");
+		else if (ctx->state == OPEN)
 			xmpp_auth(ctx);
 		else if (ctx->state == AUTH)
 			xmpp_bind(ctx);
 		else
 			assert(true);
 		goto out;
+	}
+
+	/* starttls successful */
+	if (strcmp("proceed", tag_name) == 0) {
+		char *argv[argc0 + 2];
+		argv[0] = "tlsc";
+		argv[1] = "-C";	/* XXX: this have to be optional! */
+		memcpy(argv + 2, argv0, sizeof(argv) - 2);
+		execvp("tlsc", argv);
+		err(EXIT_FAILURE, "execv");
 	}
 
 	/* SASL authentification successful */
@@ -338,10 +382,9 @@ sig_handler(int i)
 }
 
 int
-main(int argc, char**argv)
+main(int argc, char *argv[])
 {
 	int ch;
-	char pass[BUFSIZ];
 
 	/* struct with all context informations */
 	struct context ctx = NULL_CONTEXT;
@@ -352,6 +395,9 @@ main(int argc, char**argv)
 	ctx.server   = getenv("SJ_SERVER");
 	ctx.resource = getenv("SJ_RESOURCE");
 	ctx.dir      = getenv("SJ_DIR");
+
+	argv0 = argv;
+	argc0 = argc;
 
 	while ((ch = getopt(argc, argv, "d:s:u:r:")) != -1) {
 		switch (ch) {
@@ -383,10 +429,6 @@ main(int argc, char**argv)
 
 	if (ctx.resource == NULL)
 		ctx.resource = "sj";
-
-	if ((ctx.pass = readpassphrase("password: ", pass, sizeof pass, 0))
-	    == NULL)
-		goto err;
 
 	/* init block xml parser */
 	ctx.bxml = bxml_ctx_init(server_tag, &ctx);
