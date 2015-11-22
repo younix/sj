@@ -9,7 +9,7 @@ Paper of the [slcon2](http://suckless.org/conference/): http://klemkow.net/sj.pd
 ## Goals
 
 The XMPP protocol is a monster and totally over engineered.  But you have to
-deal with it cause of is wide usages and good features.  To beat this monster
+deal with it cause of its wide usages and good features.  To beat this monster
 this project try to dived it intro smaller parts and to create one program
 to handle one aspect of XMPP.
 
@@ -30,7 +30,7 @@ The program "sj" just do a few things:
 export SJ_DIR=/home/user/.xmpp
 
 # start daemon
-tcpclient server.org 5223 tlsc sj -u user -s server.org -r resources &
+tcpclient server.org 5222 sj -u user -s server.org -r resources &
 password:
 
 # set presence to 'online'
@@ -67,10 +67,12 @@ other@server.org                both    joe
   * XEP-0012: Last Activity
   * XEP-0202: Entity Time
 
-## required
+## requires
 
   * mxml 2.8
   * libbsd (for GNU-systems like Linux)
+  * [ucspi-tcp](http://cr.yp.to/ucspi-tcp.html)
+  * [ucspi-tools](https://github.com/younix/ucspi)
 
 ## tested with
 
