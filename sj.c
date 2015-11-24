@@ -164,9 +164,10 @@ xmpp_auth(struct context *ctx)
 	if (write(WRITE_FD, msg, size) < 0)
 		perror(__func__);
 
-	explicit_bzero(pass, sizeof pass);
-	explicit_bzero(authstr, strlen(authstr));
-	explicit_bzero(msg, sizeof msg);
+	/* XXX: these buffers should be zeroed with explicit_bzero(3) */
+	bzero(pass, sizeof pass);
+	bzero(authstr, strlen(authstr));
+	bzero(msg, sizeof msg);
 
 	free(authstr);
 }
