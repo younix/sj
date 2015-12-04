@@ -16,6 +16,11 @@ The
 .Nm
 is a client daemon to the XMPP chat protocol.
 It handle the protocol initiation, authentication and keep-alive pings.
+During the STARTTLS part of the initiation
+.Nm
+automatically starts
+.Xr tlsc 1
+with its own arguments.
 After an XMPP session is established
 .Nm
 starts
@@ -58,11 +63,12 @@ Resources for this XMPP session.
 .Sh EXAMPLES
 .Bl -tag -width Ds
 .It tcpclient example.org 5222 sj -u user -s example.org
-This is the recommended way to connect to the default (plaintext) port and start
+This is the recommended way to connect to the default (unencrypted) port and
+start
 .Xr tlsc 1
 implicit through
 .Nm
-itself.
+itself after the STARTTLS handshake.
 .It tcpclient example.org 5223 tlsc sj -u user -s example.org
 This way its directly connecting to the TLS port.
 .Nm
