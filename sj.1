@@ -56,7 +56,18 @@ XMPP server domain name.
 Resources for this XMPP session.
 .El
 .Sh EXAMPLES
-tcpclient example.org 5223 tlsc sj -u user -s example.org
+.Bl -tag -width Ds
+.It tcpclient example.org 5222 sj -u user -s example.org
+This is the recommended way to connect to the default (plaintext) port and start
+.Xr tlsc 1
+implicit through
+.Nm
+itself.
+.It tcpclient example.org 5223 tlsc sj -u user -s example.org
+This way its directly connecting to the TLS port.
+.Nm
+does not do the STARTTLS handshake itself.
+.El
 .Sh SEE ALSO
 .Xr ii 1 ,
 .Xr iqd 1 ,
