@@ -213,13 +213,13 @@ recv_presence(char *tag, void *data)
 	/* HACK: we need this, cause mxml can't parse tags by itself */
 	static mxml_node_t *tree = NULL;
 	static mxml_node_t *node = NULL;
-	static mxml_node_t *status = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 	const char *tag_name = NULL;
 	const char *from = NULL;
 	char *slash = NULL;
 	char path[PATH_MAX];
 	int fd;
+	int is_online = 0;
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
@@ -233,6 +233,11 @@ recv_presence(char *tag, void *data)
 
 	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
 		goto err;
+
+	if (mxmlElementGetAttr(tree->child->next, "type"))
+		is_online = 0; /* presense of 'type' attribute indicates offline */
+	else
+		is_online = 1;  /* lack of 'type' attribute indicates online */
 
 	/* cut off resourcepart from jabber ID */
 	if ((slash = strchr(from, '/')) != NULL)
@@ -251,25 +256,24 @@ recv_presence(char *tag, void *data)
 
 	snprintf(path, sizeof path, "%s/%s/status", ctx->dir, from);
 
-	status = mxmlFindElement(node, tree, "status", NULL, NULL,
-	    MXML_DESCEND_FIRST);
+	if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR))
+		== -1)
+		goto err;
 
-	if (status != NULL) {
-		if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR))
-		    == -1)
-			goto err;
-		/* write text of status-tag into this file */
-		/* concatinate all text peaces */
-		for (mxml_node_t *txt = status->child; txt != NULL;
-				txt = mxmlGetNextSibling(txt)) {
-			int space = 0;
-			const char *t = mxmlGetText(txt, &space);
-			if (space == 1)
-				write(fd, " ", 1);
-			if (write(fd, t, strlen(t)) == -1) goto err;
-		}
-		if (close(fd) == -1) goto err;
+	if (is_online) { 
+		mxml_node_t *show = NULL;
+		const char *status;
+		if (show = mxmlFindElement(node, tree, "show", NULL, NULL,
+		                           MXML_DESCEND_FIRST))
+			status = mxmlGetText(show, NULL);
+		else
+			status = "online";
+		if (write(fd, status, strlen(status)) == -1) goto err;
+	} else { 
+		; /* write nothing; make fd an empty file */
 	}
+	if (close(fd) == -1) goto err; 
+
  err:
 	if (errno != 0)
 		perror(__func__);
