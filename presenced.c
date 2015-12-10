@@ -219,7 +219,7 @@ recv_presence(char *tag, void *data)
 	char *slash = NULL;
 	char path[PATH_MAX];
 	int fd;
-	int is_online = 0;
+	bool is_online = false;
 
 	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	if (tree == NULL) err(EXIT_FAILURE, "%s: no xml tree found", __func__);
@@ -234,10 +234,12 @@ recv_presence(char *tag, void *data)
 	if ((from = mxmlElementGetAttr(tree->child->next, "from")) == NULL)
 		goto err;
 
+	/* The presence of the 'type' attribute indicates offline.
+	   The lack of it indicates online. */
 	if (mxmlElementGetAttr(tree->child->next, "type"))
-		is_online = 0; /* presense of 'type' attribute indicates offline */
+		is_online = false;
 	else
-		is_online = 1;  /* lack of 'type' attribute indicates online */
+		is_online = true;
 
 	/* cut off resourcepart from jabber ID */
 	if ((slash = strchr(from, '/')) != NULL)
@@ -256,23 +258,21 @@ recv_presence(char *tag, void *data)
 
 	snprintf(path, sizeof path, "%s/%s/status", ctx->dir, from);
 
-	if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR))
-		== -1)
+	if ((fd = open(path, O_WRONLY|O_TRUNC|O_CREAT, S_IRUSR|S_IWUSR)) == -1)
 		goto err;
 
-	if (is_online) { 
+	if (is_online) {
 		mxml_node_t *show = NULL;
 		const char *status;
-		if (show = mxmlFindElement(node, tree, "show", NULL, NULL,
-		                           MXML_DESCEND_FIRST))
+		if ((show = mxmlFindElement(node, tree, "show", NULL, NULL,
+		                           MXML_DESCEND_FIRST)) != NULL)
 			status = mxmlGetText(show, NULL);
 		else
 			status = "online";
 		if (write(fd, status, strlen(status)) == -1) goto err;
-	} else { 
-		; /* write nothing; make fd an empty file */
 	}
-	if (close(fd) == -1) goto err; 
+	/* write nothing; make fd an empty file */
+	if (close(fd) == -1) goto err;
 
  err:
 	if (errno != 0)
