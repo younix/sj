@@ -57,10 +57,14 @@ other@server.org                both    joe
   * ~~designing interface for backend programs~~
   * ~~replace linked list with one of queue.h~~
   * write front end tools
+    * web font end for mobile chatting
   * write manpages for all tools
-  * messaged: convert xml-tags into entities
+  * messaged
+    * (de)escape messaged xml save
+    * detect filesystem changes
   * create of accounts in-band
   * change passwords
+  * integrations into a service management solution like svc of djb
 
   * XEP-0077: In-Band Registration
   * XEP-0030: Service Discovery
