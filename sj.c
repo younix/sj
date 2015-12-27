@@ -56,7 +56,6 @@
 #define WRITE_FD 7
 #define READ_FD 6
 
-static int debug=0;
 char **argv0;
 int argc0;
 
@@ -114,11 +113,6 @@ xmpp_ping(struct context *ctx)
 
 	if ((size = write(WRITE_FD, msg, size)) < 0)
 		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static void
@@ -132,11 +126,6 @@ xmpp_session(struct context *ctx)
 
 	if ((size = write(WRITE_FD, msg, size)) < 0)
 		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static void
@@ -152,11 +141,7 @@ xmpp_bind(struct context *ctx)
 
 	if ((size = write(WRITE_FD, msg, strlen(msg))) < 0)
 		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
+
 	ctx->state = BIND_OUT;
 
 	free(msg);
@@ -178,11 +163,7 @@ xmpp_auth(struct context *ctx)
 
 	if (write(WRITE_FD, msg, size) < 0)
 		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
+
 	/* XXX: these buffers should be zeroed with explicit_bzero(3) */
 	bzero(pass, sizeof pass);
 	bzero(authstr, strlen(authstr));
@@ -196,11 +177,6 @@ send_tag(const char *tag)
 {
 	if (write(WRITE_FD, tag, strlen(tag)) < 0)
 		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(tag, sizeof(char), strlen(tag), stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static void
@@ -220,11 +196,6 @@ xmpp_init(struct context *ctx)
 
 	if (write(WRITE_FD, msg, size) < 0)
 		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static bool
@@ -400,8 +371,7 @@ usage(void)
 		"\t-u <user>\n"
 		"\t-s <server>\n"
 		"\t-r <resource>\n"
-		"\t-d <directory>\n"
-		"\t-D \n");
+		"\t-d <directory>\n");
 	exit(EXIT_FAILURE);
 }
 
@@ -429,11 +399,8 @@ main(int argc, char *argv[])
 	argv0 = argv;
 	argc0 = argc;
 
-	while ((ch = getopt(argc, argv, "d:s:u:r:D")) != -1) {
+	while ((ch = getopt(argc, argv, "d:s:u:r:")) != -1) {
 		switch (ch) {
-		case 'D':
-			debug = 1;
-			break;
 		case 'd':
 			ctx.dir = strdup(optarg);
 			break;
@@ -499,22 +466,12 @@ main(int argc, char *argv[])
 		if (FD_ISSET(READ_FD, &readfds)) { /* data from xmpp server */
 			if ((n = read(READ_FD, buf, BUFSIZ)) < 0) goto err;
 			if (n == 0) break;	/* connection closed */
-			if (debug) {
-				fprintf(stderr, "%s", "RECV: ");
-				fwrite(buf, sizeof(char), n, stderr);
-				fprintf(stderr, "%s", "\n");
-			}
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
-			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0) {
+			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
 				if (write(WRITE_FD, buf, n) < n)
 					goto err;
-				if (debug) {
-					fprintf(stderr, "%s", "SENT: ");
-					fwrite(buf, sizeof(char), n, stderr);
-					fprintf(stderr, "%s", "\n");
-				}
-			}
+
 			if (n == 0) {	/* close input fifo on EOF */
 				if (close(ctx.fd_in) == -1)
 					goto err;
