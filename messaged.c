@@ -261,7 +261,7 @@ build_roster(struct context *ctx)
 	while ((dp = readdir(dirp)) != NULL) {
 		if (strcmp(dp->d_name, ".") == 0 ||
 		    strcmp(dp->d_name, "..") == 0 ||
-		    strchr(dp->d_name, "@") == NULL ||
+		    strchr(dp->d_name, '@') == NULL ||
 		    dp->d_type != DT_DIR) continue;
 
 		add_contact(ctx, dp->d_name);
