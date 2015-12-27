@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2014-2015 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -19,6 +19,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -69,6 +70,8 @@ struct context {
 	".",			\
 	LIST_HEAD_INITIALIZER() \
 }
+
+struct context *global_ctx;
 
 void
 free_contact(struct contact *c)
@@ -258,6 +261,7 @@ build_roster(struct context *ctx)
 	while ((dp = readdir(dirp)) != NULL) {
 		if (strcmp(dp->d_name, ".") == 0 ||
 		    strcmp(dp->d_name, "..") == 0 ||
+		    strchr(dp->d_name, "@") == NULL ||
 		    dp->d_type != DT_DIR) continue;
 
 		add_contact(ctx, dp->d_name);
@@ -269,6 +273,14 @@ build_roster(struct context *ctx)
 	if (errno != 0)
 		perror(__func__);
 	return false;
+}
+
+static void
+signal_handler(int sig)
+{
+	if (sig == SIGHUP) {
+		build_roster(global_ctx);
+	}
 }
 
 static void
@@ -315,6 +327,8 @@ main(int argc, char *argv[])
 
 	/* check roster directory */
 	build_roster(&ctx);
+	global_ctx = &ctx;
+	signal(SIGHUP, signal_handler);
 
 	for (;;) {
 		struct contact *c = NULL;
@@ -333,8 +347,9 @@ main(int argc, char *argv[])
 		}
 
 		/* wait for input */
-		if ((sel = select(max_fd+1, &readfds, NULL, NULL, NULL)) < 0)
-			goto err;
+		if ((sel = select(max_fd+1, &readfds, NULL, NULL, NULL)) == -1
+		    && errno != EINTR)
+			err(EXIT_FAILURE, "select");
 
 		/* check for input from server */
 		if (FD_ISSET(ctx.fd_in, &readfds)) {
