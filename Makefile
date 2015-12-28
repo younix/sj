@@ -18,63 +18,49 @@ all: $(BINS)
 
 # core deamon
 sj: sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o\
+	$(CC) -o $@ $(LDFLAGS) sj.o sasl/sasl.o sasl/base64.o bxml/bxml.o\
 	     $(LIBS_MXML) $(LIBS_BSD) -lm
 
 messaged: messaged.o bxml/bxml.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) messaged.o bxml/bxml.o $(LIBS_MXML) $(LIBS_BSD)
+	$(CC) -o $@ $(LDFLAGS) messaged.o bxml/bxml.o $(LIBS_MXML) $(LIBS_BSD)
 
 presenced: presenced.o bxml/bxml.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) presenced.o bxml/bxml.o $(LIBS_MXML) $(LIBS_BSD)
+	$(CC) -o $@ $(LDFLAGS) presenced.o bxml/bxml.o $(LIBS_MXML) $(LIBS_BSD)
 
 iqd: iqd.o bxml/bxml.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) iqd.o bxml/bxml.o $(LIBS_MXML)
+	$(CC) -o $@ $(LDFLAGS) iqd.o bxml/bxml.o $(LIBS_MXML)
 
 # commandline tools
 roster: roster.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) roster.o $(LIBS_MXML)
+	$(CC) -o $@ $(LDFLAGS) roster.o $(LIBS_MXML)
 
 presence: presence.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) presence.o
+	$(CC) -o $@ $(LDFLAGS) presence.o
 
 # extensions
 xmpp_time: xmpp_time.o
-	@echo "Build: $@"
-	@$(CC) -o $@ $(LDFLAGS) xmpp_time.o $(LIBS_MXML)
+	$(CC) -o $@ $(LDFLAGS) xmpp_time.o $(LIBS_MXML)
 
 xmpp_time.o: xmpp_time.c
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ xmpp_time.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ xmpp_time.c
 
 sj.o: sj.c bxml/bxml.h sasl/sasl.h
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ sj.c
 
 messaged.o: messaged.c bxml/bxml.h
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ messaged.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ messaged.c
 
 presenced.o: presenced.c bxml/bxml.h
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ presenced.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) $(CFLAGS_BSD) -c -o $@ presenced.c
 
 iqd.o: iqd.c bxml/bxml.h
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ iqd.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ iqd.c
 
 roster.o: roster.c
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ roster.c
+	$(CC) $(CFLAGS) $(CFLAGS_MXML) -c -o $@ roster.c
 
 .c.o:
-	@echo "Build: $@"
-	@$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
 	rm -f $(BINS) *.o *.core expat
