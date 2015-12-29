@@ -458,11 +458,11 @@ main(int argc, char *argv[])
 		if (sel == -1) goto err;
 
 		if (FD_ISSET(READ_FD, &readfds)) { /* data from xmpp server */
-			if ((n = read(READ_FD, buf, BUFSIZ)) < 0) goto err;
+			if ((n = read(READ_FD, buf, sizeof buf)) < 0) goto err;
 			if (n == 0) break;	/* connection closed */
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
-			while ((n = read(ctx.fd_in, buf, BUFSIZ)) > 0)
+			while ((n = read(ctx.fd_in, buf, sizeof buf)) > 0)
 				if (write(WRITE_FD, buf, n) < n)
 					goto err;
 
