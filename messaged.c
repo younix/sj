@@ -171,8 +171,6 @@ send_message(struct context *ctx, struct contact *con)
 	if ((size = read(con->fd, buf, sizeof(buf) - 1)) < 0)
 		return false;
 
-	/* HACK: This is a Hack just for Linux! */
-	fprintf(stderr, "reopen: %s\n", con->in_path);
 	if (close(con->fd) == -1) return false;
 	if ((con->fd = open(con->in_path, O_RDONLY|O_NONBLOCK, 0)) == -1)
 		return false;
