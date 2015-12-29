@@ -462,9 +462,10 @@ main(int argc, char *argv[])
 			if (n == 0) break;	/* connection closed */
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
-			while ((n = read(ctx.fd_in, buf, sizeof buf)) > 0)
-				if (write(WRITE_FD, buf, n) < n)
-					goto err;
+			while ((n = read(ctx.fd_in, buf, sizeof(buf) - 1)) > 0){
+				buf[n] = '\0';
+				send_tag(buf);
+			}
 
 			if (n == 0) {	/* close input fifo on EOF */
 				if (close(ctx.fd_in) == -1)
