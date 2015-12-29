@@ -179,11 +179,14 @@ send_message(struct context *ctx, struct contact *con)
 		return true;
 
 	buf[size] = '\0';
+	if (buf[size - 1] == '\n')
+		buf[size - 1] = '\0';
 	msg_send(ctx, buf, con->name);
 
+	/* Write message to the out file, that the use see its own messages. */
 	prepare_prompt(prompt, sizeof prompt, ctx->jid);
 	if (write(con->out, prompt, strlen(prompt)) == -1) return false;
-	if (write(con->out, buf, strlen(buf)) == -1) return false;
+	if (write(con->out, buf, size) == -1) return false;
 	if (write(con->out, "\n", 1) == -1) return false;
 
 	return true;
