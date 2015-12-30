@@ -8,15 +8,15 @@
 tcpclient host port [tlsc] \\
 .Nm
 .Op Fl d Ar dir
-.Op Fl r Ar res
+.Op Fl r Ar resource
 .Op Fl s Ar server
 .Op Fl u Ar user
 .Sh DESCRIPTION
 The
 .Nm
-is a client daemon to the XMPP chat protocol.
-It handle the protocol initiation, authentication and keep-alive pings.
-During the STARTTLS part of the initiation
+daemon is a client for the XMPP (Jabber) chat protocol. It handles the
+protocol initiation, authentication and keep-alive pings.  During the
+STARTTLS part of the initiation,
 .Nm
 automatically starts
 .Xr tlsc 1
@@ -28,49 +28,51 @@ starts
 .Xr presenced 1
 and
 .Xr iqd 1
-and delegated all corresponding stanzas through
-.Xr pipe 2
-to these daemons.
+and delegates all corresponding stanzas to these daemons via a
+.Xr pipe 2 .
 .Nm
-exits
-if one of these pipes is widowed.
-.sp 1
-The options are as follows:
+exits if one of these pipes is widowed.
+.Sh OPTIONS
 .Bl -tag -width Ds
 .It Fl d Ar dir
-sets the path to
-.Ar dir .
-This option overrides the environment SJ_DIR.
-Default is the current working directory.
-.It Fl r Ar res
-sets the resource part of the users JID.
+Path to sj directory stucture; defaults to current working directory.
+.It Fl r Ar resource
+Resource for this XMPP session.
 .It Fl s Ar server
-sets the host part of the users JID.
+XMPP server domain name.
 .It Fl u Ar user
-sets the username.
+XMPP username.
 .El
 .Sh ENVIRONMENT
+Command line options, when provided, override the environment variables.
 .Bl -tag -width SJ_PASSWORD
 .It Ev SJ_DIR
-Path to sj directory stucture.
-.It Ev SJ_USER
-Username for xmpp-server login.
+See option 
+.Fl d Ar dir
+.It Ev SJ_RESOURCE
+See option
+.Fl r Ar resource
 .It Ev SJ_SERVER
-XMPP server domain name.
-.It Ev SJ_RESOURCES
-Resources for this XMPP session.
+See option
+.Fl s Ar server
+.It Ev SJ_USER
+See option
+.Fl u Ar user
 .El
 .Sh EXAMPLES
+For a Jabber ID of user@example.org:
 .Bl -tag -width Ds
 .It tcpclient example.org 5222 sj -u user -s example.org
 This is the recommended way to connect to the default (unencrypted) port and
 start
 .Xr tlsc 1
-implicit through
+implicitly through
 .Nm
 itself after the STARTTLS handshake.
 .It tcpclient example.org 5223 tlsc sj -u user -s example.org
-This way its directly connecting to the TLS port.
+Using the encrypted port and explicity calling
+.Xr tlsc .
+This way
 .Nm
 does not do the STARTTLS handshake itself.
 .El
