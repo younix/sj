@@ -23,6 +23,13 @@ The program "sj" just do a few things:
     * messaged
     * iqd
 
+## requires
+
+  * mxml 2.8
+  * libbsd (for GNU-systems like Linux)
+  * [ucspi-tcp](http://cr.yp.to/ucspi-tcp.html)
+  * [ucspi-tools](https://github.com/younix/ucspi)
+
 ## usage
 
 ```sh
@@ -70,13 +77,6 @@ other@server.org                both    joe
   * XEP-0030: Service Discovery
   * XEP-0012: Last Activity
   * XEP-0202: Entity Time
-
-## requires
-
-  * mxml 2.8
-  * libbsd (for GNU-systems like Linux)
-  * [ucspi-tcp](http://cr.yp.to/ucspi-tcp.html)
-  * [ucspi-tools](https://github.com/younix/ucspi)
 
 ## tested with
 
