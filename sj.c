@@ -283,7 +283,7 @@ server_tag(char *tag, void *data)
 		argv[0] = "tlsc";
 		memcpy(argv + 1, argv0, sizeof(argv) - 1);
 		execvp("tlsc", argv);
-		err(EXIT_FAILURE, "execv");
+		err(EXIT_FAILURE, "execvp tlsc");
 	}
 
 	/* SASL authentification successful */
