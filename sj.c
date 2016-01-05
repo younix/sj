@@ -107,6 +107,8 @@ send_tag(const char *tag)
 {
 	if (write(WRITE_FD, tag, strlen(tag)) < 0)
 		perror(__func__);
+	if (debug)
+		fprintf(stderr, "SENT: %s\n", tag);
 }
 
 static void
@@ -120,11 +122,6 @@ xmpp_ping(struct context *ctx)
 	    ctx->user, ctx->server, ctx->resource, ctx->server, ctx->id);
 
 	send_tag(msg);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static void
@@ -137,11 +134,6 @@ xmpp_session(struct context *ctx)
 	    "</iq>" , ctx->server);
 
 	send_tag(msg);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static void
@@ -156,11 +148,6 @@ xmpp_bind(struct context *ctx)
 	    "</iq>", ctx->resource);
 
 	send_tag(msg);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 	ctx->state = BIND_OUT;
 
 	free(msg);
@@ -181,11 +168,6 @@ xmpp_auth(struct context *ctx)
 		" mechanism='PLAIN'>%s</auth>", authstr);
 
 	send_tag(msg);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 
 	/* XXX: these buffers should be zeroed with explicit_bzero(3) */
 	bzero(pass, sizeof pass);
@@ -193,18 +175,6 @@ xmpp_auth(struct context *ctx)
 	bzero(msg, sizeof msg);
 
 	free(authstr);
-}
-
-static void
-send_tag(const char *tag)
-{
-	if (write(WRITE_FD, tag, strlen(tag)) < 0)
-		perror(__func__);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(tag, sizeof(char), strlen(tag), stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static void
@@ -223,11 +193,6 @@ xmpp_init(struct context *ctx)
 	    ctx->user, ctx->server, ctx->server);
 
 	send_tag(msg);
-	if (debug) {
-		fprintf(stderr, "%s", "SENT: ");
-		fwrite(msg, sizeof(char), size, stderr);
-		fprintf(stderr, "%s", "\n");
-	}
 }
 
 static bool
@@ -512,11 +477,6 @@ main(int argc, char *argv[])
 			while ((n = read(ctx.fd_in, buf, sizeof(buf) - 1)) > 0){
 				buf[n] = '\0';
 				send_tag(buf);
-				if (debug) {
-					fprintf(stderr, "%s", "SENT: ");
-					fwrite(buf, sizeof(char), n, stderr);
-					fprintf(stderr, "%s", "\n");
-				}
 			}
 
 			if (n == 0) {	/* close input fifo on EOF */
