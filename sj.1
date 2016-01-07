@@ -62,14 +62,14 @@ See option
 .Sh EXAMPLES
 For a Jabber ID of user@example.org:
 .Bl -tag -width Ds
-.It tcpclient example.org 5222 sj -u user -s example.org
+.It env SJ_USER=user SJ_SERVER=example.org tcpclient example.org 5222 sj
 This is the recommended way to connect to the default (unencrypted) port and
 start
 .Xr tlsc 1
 implicitly through
 .Nm
 itself after the STARTTLS handshake.
-.It tcpclient example.org 5223 tlsc sj -u user -s example.org
+.It env SJ_USER=user SJ_SERVER=example.org tcpclient example.org 5223 tlsc sj
 Using the encrypted port and explicity calling
 .Xr tlsc .
 This way
