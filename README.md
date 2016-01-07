@@ -30,7 +30,7 @@ The program "sj" just do a few things:
 export SJ_DIR=/home/user/.xmpp
 
 # start daemon
-tcpclient server.org 5222 sj -u user -s server.org -r resources &
+env SJ_USER=user SJ_SERVER=server.org SJ_RESOURCE=sj tcpclient server.org 5222 sj &
 password:
 
 # set presence to 'online'
@@ -49,7 +49,6 @@ presence -to other@server.com subscribed
 roster
 other@server.org                both    joe
 ```
-
 ## TODO
 
   * ~~replace socket-handling with UCSPI~~
@@ -57,7 +56,7 @@ other@server.org                both    joe
   * ~~designing interface for backend programs~~
   * ~~replace linked list with one of queue.h~~
   * write front end tools
-    * web font end for mobile chatting
+    * web front end for mobile chatting
   * write manpages for all tools
   * messaged
     * (de)escape messaged xml save
@@ -101,3 +100,17 @@ other@server.org                both    joe
 
 You should be able to write plugins for this client in any language of
 your choice.  The interface are just plain text files.
+
+## front ends
+
+See [sj tools](https://github.com/GReagle/sjt) for some front ends.
+
+## known issues
+
+The following command won't work due to
+[a bug in tlsc](https://github.com/younix/ucspi/issues/5)
+
+`tcpclient server.org 5222 sj -u user -s server.org -r sj`
+
+so use environment variables instead of the command line options.  This is
+demonstrated in the "usage" section of this document.
