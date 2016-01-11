@@ -56,6 +56,7 @@
 #define WRITE_FD 7
 #define READ_FD 6
 
+static int debug=0;
 char **argv0;
 int argc0;
 
@@ -106,6 +107,8 @@ send_tag(const char *tag)
 {
 	if (write(WRITE_FD, tag, strlen(tag)) < 0)
 		perror(__func__);
+	if (debug)
+		fprintf(stderr, "SENT: %s\n", tag);
 }
 
 static void
@@ -365,7 +368,8 @@ usage(void)
 		"\t-u <user>\n"
 		"\t-s <server>\n"
 		"\t-r <resource>\n"
-		"\t-d <directory>\n");
+		"\t-d <directory>\n"
+		"\t-D \n");
 	exit(EXIT_FAILURE);
 }
 
@@ -393,8 +397,11 @@ main(int argc, char *argv[])
 	argv0 = argv;
 	argc0 = argc;
 
-	while ((ch = getopt(argc, argv, "d:s:u:r:")) != -1) {
+	while ((ch = getopt(argc, argv, "d:s:u:r:D")) != -1) {
 		switch (ch) {
+		case 'D':
+			debug = 1;
+			break;
 		case 'd':
 			ctx.dir = strdup(optarg);
 			break;
@@ -460,6 +467,11 @@ main(int argc, char *argv[])
 		if (FD_ISSET(READ_FD, &readfds)) { /* data from xmpp server */
 			if ((n = read(READ_FD, buf, sizeof buf)) < 0) goto err;
 			if (n == 0) break;	/* connection closed */
+			if (debug) {
+				fprintf(stderr, "%s", "RECV: ");
+				fwrite(buf, sizeof(char), n, stderr);
+				fprintf(stderr, "%s", "\n");
+			}
 			bxml_add_buf(ctx.bxml, buf, n);
 		} else if (FD_ISSET(ctx.fd_in, &readfds)) {
 			while ((n = read(ctx.fd_in, buf, sizeof(buf) - 1)) > 0){
