@@ -11,6 +11,7 @@ tcpclient host port [tlsc] \\
 .Op Fl r Ar resource
 .Op Fl s Ar server
 .Op Fl u Ar user
+.Op Fl D
 .Sh DESCRIPTION
 The
 .Nm
@@ -42,6 +43,8 @@ Resource for this XMPP session.
 XMPP server domain name.
 .It Fl u Ar user
 XMPP username.
+.It Fl D
+prints all sent and received XML messages to stderr.
 .El
 .Sh ENVIRONMENT
 Command line options, when provided, override the environment variables.
