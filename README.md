@@ -37,7 +37,7 @@ The program "sj" just do a few things:
 export SJ_DIR=/home/user/.xmpp
 
 # start daemon
-env SJ_USER=user SJ_SERVER=server.org SJ_RESOURCE=sj tcpclient server.org 5222 sj &
+tcpclient server.org 5222 sj -u user -s server.org -r sj &
 password:
 
 # set presence to 'online'
@@ -107,10 +107,20 @@ See [sj tools](https://github.com/GReagle/sjt) for some front ends.
 
 ## known issues
 
-The following command won't work due to
-[a bug in tlsc](https://github.com/younix/ucspi/issues/5)
+### POSIXLY_CORRECT for GNU getopt()
+
+The following command will produce error "tlsc: invalid option" on systems
+with GNU getopt()
 
 `tcpclient server.org 5222 sj -u user -s server.org -r sj`
 
-so use environment variables instead of the command line options.  This is
-demonstrated in the "usage" section of this document.
+unless you set the environment variable POSIXLY_CORRECT.  See the
+[issue for tlsc](https://github.com/younix/ucspi/issues/5) for more
+details.  You can also get around this problem by using sj environment
+variables (e.g. SJ_USER) instead of command line options.
+
+### TLSC_NO_VERIFICATION
+
+Currently, you need to set the environment variable `export
+TLSC_NO_VERIFICATION=1` in order to avoid "tlsc: tls_error: ssl verify
+setup failure".
