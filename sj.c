@@ -28,6 +28,7 @@
 #include <limits.h>
 #include <netdb.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -56,7 +57,7 @@
 #define WRITE_FD 7
 #define READ_FD 6
 
-static int debug=0;
+static bool debug = false;
 char **argv0;
 int argc0;
 
@@ -400,7 +401,7 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "d:s:u:r:D")) != -1) {
 		switch (ch) {
 		case 'D':
-			debug = 1;
+			debug = true;
 			break;
 		case 'd':
 			ctx.dir = strdup(optarg);
