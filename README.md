@@ -8,14 +8,14 @@ Paper of the [slcon2](http://suckless.org/conference/): http://klemkow.net/sj.pd
 
 ## Goals
 
-The XMPP protocol is a monster and totally over engineered.  But you have to
-deal with it cause of its wide usages and good features.  To beat this monster
-this project try to dived it intro smaller parts and to create one program
+The XMPP protocol is a monster and totally overengineered.  But you have to
+deal with it because of its widespread use and good features.  To beat this monster,
+this project tries to divide it into smaller parts and to create one program
 to handle one aspect of XMPP.
 
-The program "sj" just do a few things:
+The program "sj" just does a few things:
 
-  * opens a connection with an XMPP server
+  * opens a connection to an XMPP server
   * do authentication (+binding +session registration)
   * perfoms keep-alive pings to the server
   * segmenting tags and routing them to other daemons:
@@ -56,6 +56,7 @@ presence -to other@server.com subscribed
 roster
 other@server.org                both    joe
 ```
+
 ## TODO
 
   * ~~replace socket-handling with UCSPI~~
@@ -101,9 +102,9 @@ other@server.org                both    joe
 You should be able to write plugins for this client in any language of
 your choice.  The interface are just plain text files.
 
-## front ends
+## frontends
 
-See [sj tools](https://github.com/GReagle/sjt) for some front ends.
+See [sj tools](https://github.com/GReagle/sjt) for some frontends.
 
 ## known issues
 
