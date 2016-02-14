@@ -102,9 +102,9 @@ other@server.org                both    joe
 You should be able to write plugins for this client in any language of
 your choice.  The interface are just plain text files.
 
-## frontends
+## front ends
 
-See [sj tools](https://github.com/GReagle/sjt) for some frontends.
+See [sj tools](https://github.com/GReagle/sjt) for some front ends.
 
 ## known issues
 
