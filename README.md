@@ -91,11 +91,13 @@ other@server.org                both    joe
 
 ## build
 
- * git clone https://github.com/younix/sj.git
- * cd sj
- * git submodule init
- * git submodule update
- * make
+```sh
+git clone https://github.com/younix/sj.git
+cd sj
+git submodule init
+git submodule update
+make
+```
 
 ## plugins
 
