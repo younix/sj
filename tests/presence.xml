@@ -1,0 +1,16 @@
+<presence from='user@host/@res' to='younix_test@jabber.ccc.de/obsd'>
+	<status>Ich bin gerade nicht hier</status>
+	<priority>1</priority>
+	<c xmlns='http://jabber.org/protocol/caps'
+		node='http://pidgin.im/'
+		hash='sha-1'
+		ver='AcN1/PEN8nq7AHD+9jpxMV4U6YM='
+		ext='voice-v1 camera-v1 video-v1'/>
+	<x xmlns='vcard-temp:x:update'><photo/></x>
+	<delay xmlns='urn:xmpp:delay'
+		from='user@host/@res'
+		stamp='2015-03-07T01:19:10.835Z'/>
+	<x xmlns='jabber:x:delay'
+		from='user@host/@res'
+		stamp='20150307T01:19:10'/>
+</presence>
