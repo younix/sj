@@ -77,7 +77,7 @@ main(int argc, char *argv[])
 	mxmlLoadFile(tree, stdin, MXML_NO_CALLBACK);
 
 	/* check iq tag */
-	if ((node = tree->child) == NULL)
+	if ((node = mxmlGetFirstChild(tree)) == NULL)
 		errx(EXIT_FAILURE, "unable to parse xml data");
 
 	if ((id = mxmlElementGetAttr(node, "id")) == NULL)

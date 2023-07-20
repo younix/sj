@@ -67,7 +67,7 @@ recv_iq(char *tag, void *data)
 	if (tree == NULL) err(EXIT_FAILURE, "unable to load xml base tag");
 
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
-	if ((node = tree->child) == NULL)
+	if ((node = mxmlGetFirstChild(tree)) == NULL)
 		goto err;
 
 	if ((tag_name = mxmlGetElement(node)) == NULL) goto err;
@@ -138,7 +138,7 @@ recv_iq(char *tag, void *data)
 		perror(__func__);
  out:
 	errno = 0;
-	mxmlDelete(tree->child);
+	mxmlDelete(node);
 }
 
 static void

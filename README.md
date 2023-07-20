@@ -25,7 +25,7 @@ The program "sj" just does a few things:
 
 ## requires
 
-  * mxml 2.8
+  * mxml 2.8 or 3.x
   * libbsd (for GNU-systems like Linux)
   * [ucspi-tcp](http://cr.yp.to/ucspi-tcp.html)
   * [ucspi-tools](https://github.com/younix/ucspi)

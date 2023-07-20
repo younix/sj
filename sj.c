@@ -261,7 +261,7 @@ server_tag(char *tag, void *data)
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
 	/* End of HACK */
 
-	if ((node = tree->child->next) == NULL)
+	if ((node = mxmlGetNextSibling(mxmlGetFirstChild(tree))) == NULL)
 		err(EXIT_FAILURE, "no node found");
 
 	const char *tag_name = mxmlGetElement(node);
@@ -345,7 +345,7 @@ server_tag(char *tag, void *data)
 	if (errno != 0)
 		perror(__func__);
  out:
-	mxmlDelete(tree->child->next);
+	mxmlDelete(node);
 }
 
 /*

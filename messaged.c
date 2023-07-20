@@ -210,7 +210,7 @@ recv_message(char *tag, void *data)
 	if (tree == NULL) err(EXIT_FAILURE, "unable to load xml base");
 
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
-	if ((node = tree->child) == NULL)
+	if ((node = mxmlGetFirstChild(tree)) == NULL)
 		goto err;
 
 	if ((tag_name = mxmlGetElement(node)) == NULL) goto err;
@@ -226,7 +226,7 @@ recv_message(char *tag, void *data)
 	if (c == NULL)
 		c = add_contact(ctx, from);
 
-	body = mxmlFindElement(node->child, tree, "body", NULL, NULL,
+	body = mxmlFindElement(mxmlGetFirstChild(node), tree, "body", NULL, NULL,
 	    MXML_NO_DESCEND);
 	if (body == NULL)
 		goto err;
@@ -235,7 +235,7 @@ recv_message(char *tag, void *data)
 	write(c->out, prompt, strlen(prompt));
 
 	/* concatinate all text peaces */
-	for (mxml_node_t *txt = body->child; txt != NULL;
+	for (mxml_node_t *txt = mxmlGetFirstChild(body); txt != NULL;
 	    txt = mxmlGetNextSibling(txt)) {
 		int space = 0;
 		const char *t = mxmlGetText(txt, &space);
@@ -247,7 +247,7 @@ recv_message(char *tag, void *data)
  err:
 	if (errno != 0)
 		perror(__func__);
-	mxmlDelete(tree->child);
+	mxmlDelete(node);
 }
 
 static bool
