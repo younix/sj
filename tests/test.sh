@@ -20,7 +20,7 @@ tmpdir=$(mktemp -d sj_tests_XXXXXX)
 
 # prepare
 mkdir "$tmpdir/ext"
-ln -s '../../../xmpp:time' "$tmpdir/ext/urn:xmpp:time"
+ln -s '../../../xmpp_time' "$tmpdir/ext/urn:xmpp:time"
 touch "$tmpdir/in"
 
 # start iqd with input
