@@ -4,7 +4,7 @@ export MALLOC_OPTIONS="S"
 
 . ./tap-functions -u
 
-plan_tests 11
+plan_tests 12
 
 # prepare
 
@@ -51,6 +51,9 @@ ok $? "messaged create in file as named pipe"
 
 grep -q '^....-..-.. ..:.. <eve@server.org> $' "$tmpdir/eve@server.org/out"
 ok $? "empty messages are accepted"
+
+grep -q '^....-..-.. ..:.. <cari@server.org/.*> consectetur$' "$tmpdir/cari@server.org/out"
+ok $? "message without active element is accepted"
 
 #
 # presenced tests
