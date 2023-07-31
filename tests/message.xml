@@ -9,3 +9,4 @@
 <message from='eve@server.org' to='bob@server.org' type='chat' id='12345'>
 	<active xmlns='http://jabber.org/protocol/chatstates'/>
 </message>
+<message to='bob@server.org/sj' xml:lang='en' id='9a75c46543fd78fd' type='chat' from='cari@server.org/go-sendxmpp.a5306d3b'><body>consectetur</body><stanza-id id='0OzoyIscRghzUgvc3O03UZEr' xmlns='urn:xmpp:sid:0' by='bob@server.org'/></message>
