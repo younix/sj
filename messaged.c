@@ -226,8 +226,8 @@ recv_message(char *tag, void *data)
 	if (c == NULL)
 		c = add_contact(ctx, from);
 
-	body = mxmlFindElement(mxmlGetFirstChild(node), tree, "body", NULL, NULL,
-	    MXML_NO_DESCEND);
+	body = mxmlFindElement(tree, tree, "body", NULL, NULL,
+	    MXML_DESCEND);
 	if (body == NULL)
 		goto err;
 
