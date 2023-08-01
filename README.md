@@ -47,10 +47,10 @@ presence
 roster -a other@server.com -n joe
 
 # subscribe his online status
-presence -to other@server.com subscribe
+presence -t other@server.com subscribe
 
 # let him see your online status
-presence -to other@server.com subscribed
+presence -t other@server.com subscribed
 
 # view buddies on your roster
 roster
