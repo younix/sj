@@ -179,8 +179,11 @@ send_message(struct context *ctx, struct contact *con)
 		return true;
 
 	buf[size] = '\0';
-	if (buf[size - 1] == '\n')
+	/* Trim trailing whitespace/control characters. */
+	while (buf[size - 1] <= ' ') {
 		buf[size - 1] = '\0';
+		size--;
+	}
 	msg_send(ctx, buf, con->name);
 
 	/* Write message to the out file, that the use see its own messages. */
