@@ -161,11 +161,13 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 		perror(__func__);
 }
 
+char *escape_tag(char *string);
 static bool
 send_message(struct context *ctx, struct contact *con)
 {
 	char prompt[BUFSIZ];
 	char buf[BUFSIZ];
+	char *escaped = NULL;
 	ssize_t size = 0;
 
 	if ((size = read(con->fd, buf, sizeof(buf) - 1)) < 0)
@@ -184,15 +186,46 @@ send_message(struct context *ctx, struct contact *con)
 		buf[size - 1] = '\0';
 		size--;
 	}
-	msg_send(ctx, buf, con->name);
+	/* These characters must be escaped. */
+	if (NULL != strchr(buf, '<') || NULL != strchr(buf, '&')) {
+		/* Get a new string. */
+		escaped = escape_tag(buf);
+	}
+	msg_send(ctx, escaped ? escaped : buf, con->name);
+	free(escaped);
 
-	/* Write message to the out file, that the use see its own messages. */
+	/* Write message to the out file, letting the user see its own messages. */
 	prepare_prompt(prompt, sizeof prompt, ctx->jid);
 	if (write(con->out, prompt, strlen(prompt)) == -1) return false;
 	if (write(con->out, buf, size) == -1) return false;
 	if (write(con->out, "\n", 1) == -1) return false;
 
 	return true;
+}
+char *
+escape_tag(char *string)
+{
+	/* allocate the amount of space that we'll need */
+	/* One byte for the null character */
+	size_t length = 1;
+	size_t i;
+	for(i=0;string[i];i++) {
+		/* For every <, we need 3 more bytes */
+		if (string[i] == '<') length += 4;
+		/* For every &, we need 4 more bytes */
+		else if (string[i] == '&') length += 5;
+		else length++;
+	}
+	char *new = malloc(length);
+	char *ret = new;
+
+	for(i=0;string[0];string++) {
+		if (string[i] == '<') new = stpcpy(new, "&lt;");
+		else if (string[i] == '&') new = stpcpy(new, "&amp;");
+		else { new[0] = string[0]; new++; }
+	}
+	ret[length] = '\0';
+	return ret;
 }
 
 static void
