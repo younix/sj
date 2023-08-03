@@ -201,14 +201,14 @@ start_sub_proccess(struct context *ctx)
 {
 	char cmd[BUFSIZ];
 
-	snprintf(cmd, sizeof cmd, "exec messaged -j %s@%s -d %s",
+	snprintf(cmd, sizeof cmd, "exec messaged -j %s@%s -d '%s'",
 	    ctx->user, ctx->server, ctx->dir);
 	if ((ctx->fh_msg = popen(cmd, "w")) == NULL) goto err;
 
-	snprintf(cmd, sizeof cmd, "exec presenced -d %s", ctx->dir);
+	snprintf(cmd, sizeof cmd, "exec presenced -d '%s'", ctx->dir);
 	if ((ctx->fh_pre = popen(cmd, "w")) == NULL) goto err;
 
-	snprintf(cmd, sizeof cmd, "exec iqd -d %s", ctx->dir);
+	snprintf(cmd, sizeof cmd, "exec iqd -d '%s'", ctx->dir);
 	if ((ctx->fh_iq = popen(cmd, "w")) == NULL) goto err;
 
 	return true;
