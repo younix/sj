@@ -175,9 +175,8 @@ escape_tag(const char *string)
 		else length++;
 	}
 	char *new = malloc(length);
-	if (NULL == new) {
-		perror(__func__);
-	}
+	if (NULL == new)
+		err(EXIT_FAILURE, "malloc");
 	char *ret = new;
 
 	for (; string[0]; string++) {
