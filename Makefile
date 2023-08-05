@@ -80,7 +80,7 @@ install:
 	cp $(BINS) ${HOME}/bin
 
 tests:
-	cd tests && test.sh
+	cd tests && ./test.sh
 
 include bxml/Makefile.inc
 include sasl/Makefile.inc
