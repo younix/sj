@@ -161,7 +161,34 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 		perror(__func__);
 }
 
-char *escape_tag(char *string);
+char *
+escape_tag(const char *string)
+{
+	/* allocate the amount of space that we'll need */
+	/* One byte for the null character */
+	size_t length = 1;
+	for (size_t i = 0; string[i]; i++) {
+		/* For every <, we need 3 more bytes */
+		if (string[i] == '<') length += 4;
+		/* For every &, we need 4 more bytes */
+		else if (string[i] == '&') length += 5;
+		else length++;
+	}
+	char *new = malloc(length);
+	if (NULL == new) {
+		perror(__func__);
+	}
+	char *ret = new;
+
+	for (; string[0]; string++) {
+		if (string[0] == '<') new = stpcpy(new, "&lt;");
+		else if (string[0] == '&') new = stpcpy(new, "&amp;");
+		else { new[0] = string[0]; new++; }
+	}
+	ret[length] = '\0';
+	return ret;
+}
+
 static bool
 send_message(struct context *ctx, struct contact *con)
 {
@@ -181,13 +208,13 @@ send_message(struct context *ctx, struct contact *con)
 		return true;
 
 	buf[size] = '\0';
-	/* Trim trailing whitespace/control characters. */
-	while (buf[size - 1] <= ' ') {
+	/* Trim trailing control characters. */
+	while (iscntrl(buf[size - 1])) {
 		buf[size - 1] = '\0';
 		size--;
 	}
 	/* These characters must be escaped. */
-	if (NULL != strchr(buf, '<') || NULL != strchr(buf, '&')) {
+	if (strcspn(buf, "<&") != size) { /* TODO: fix size_t vs ssize_t warning */
 		/* Get a new string. */
 		escaped = escape_tag(buf);
 	}
@@ -201,31 +228,6 @@ send_message(struct context *ctx, struct contact *con)
 	if (write(con->out, "\n", 1) == -1) return false;
 
 	return true;
-}
-char *
-escape_tag(char *string)
-{
-	/* allocate the amount of space that we'll need */
-	/* One byte for the null character */
-	size_t length = 1;
-	size_t i;
-	for(i=0;string[i];i++) {
-		/* For every <, we need 3 more bytes */
-		if (string[i] == '<') length += 4;
-		/* For every &, we need 4 more bytes */
-		else if (string[i] == '&') length += 5;
-		else length++;
-	}
-	char *new = malloc(length);
-	char *ret = new;
-
-	for(i=0;string[0];string++) {
-		if (string[i] == '<') new = stpcpy(new, "&lt;");
-		else if (string[i] == '&') new = stpcpy(new, "&amp;");
-		else { new[0] = string[0]; new++; }
-	}
-	ret[length] = '\0';
-	return ret;
 }
 
 static void
