@@ -164,7 +164,8 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 char *
 escape_tag(const char *string)
 {
-	char *new, *ret;
+	char *new;
+	char ch[2] = {'\0', '\0'};
 	size_t length = 1;	/* One byte for the null character */
 
 	/* allocate the amount of space that we'll need */
@@ -176,16 +177,25 @@ escape_tag(const char *string)
 		else length++;
 	}
 
-	if ((ret = new = malloc(length)) == NULL)
+	if ((new = calloc(length, sizeof *new)) == NULL)
 		err(EXIT_FAILURE, "malloc");
 
 	for (; string[0]; string++) {
-		if (string[0] == '<') new = stpcpy(new, "&lt;");
-		else if (string[0] == '&') new = stpcpy(new, "&amp;");
-		else { new[0] = string[0]; new++; }
+		/* TODO: We should do official XML escaping here. */
+		switch (string[0]) {
+		case '<':
+			strlcat(new, "&lt;", length);
+			break;
+		case '&':
+			strlcat(new, "&lt;", length);
+			break;
+		default:
+			ch[0] = string[0];
+			strlcat(new, ch, length);
+		}
 	}
-	ret[length] = '\0';
-	return ret;
+
+	return new;
 }
 
 static bool
