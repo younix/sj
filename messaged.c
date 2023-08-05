@@ -164,9 +164,10 @@ msg_send(struct context *ctx, const char *msg, const char *to)
 char *
 escape_tag(const char *string)
 {
+	char *new, *ret;
+	size_t length = 1;	/* One byte for the null character */
+
 	/* allocate the amount of space that we'll need */
-	/* One byte for the null character */
-	size_t length = 1;
 	for (size_t i = 0; string[i]; i++) {
 		/* For every <, we need 3 more bytes */
 		if (string[i] == '<') length += 4;
@@ -174,10 +175,9 @@ escape_tag(const char *string)
 		else if (string[i] == '&') length += 5;
 		else length++;
 	}
-	char *new = malloc(length);
-	if (NULL == new)
+
+	if ((ret = new = malloc(length)) == NULL)
 		err(EXIT_FAILURE, "malloc");
-	char *ret = new;
 
 	for (; string[0]; string++) {
 		if (string[0] == '<') new = stpcpy(new, "&lt;");
