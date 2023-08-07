@@ -14,6 +14,11 @@
  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
  */
 
+#include <sys/queue.h>
+#include <sys/select.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
 #include <dirent.h>
 #include <err.h>
 #include <errno.h>
@@ -33,11 +38,6 @@
 
 #include <time.h>
 #include <unistd.h>
-
-#include <sys/queue.h>
-#include <sys/select.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 
 #include <mxml.h>
 
