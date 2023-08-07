@@ -29,21 +29,25 @@
 bool
 isshow(const char *show)
 {
-	if (strcmp(show, "away") == 0) return true;
-	if (strcmp(show, "chat") == 0) return true;
-	if (strcmp(show, "dnd") == 0) return true;
-	if (strcmp(show, "xa") == 0) return true;
+	if (strcmp(show, "away") == 0 ||
+	    strcmp(show, "chat") == 0 ||
+	    strcmp(show, "dnd") == 0 ||
+	    strcmp(show, "xa") == 0)
+		return true;
+
 	return false;
 }
 
 bool
 istype(const char *type)
 {
-	if (strcmp(type, "subscribe") == 0) return true;
-	if (strcmp(type, "subscribed") == 0) return true;
-	if (strcmp(type, "unavailable") == 0) return true;
-	if (strcmp(type, "unsubscribe") == 0) return true;
-	if (strcmp(type, "unsubscribed") == 0) return true;
+	if (strcmp(type, "subscribe") == 0 ||
+	    strcmp(type, "subscribed") == 0 ||
+	    strcmp(type, "unavailable") == 0 ||
+	    strcmp(type, "unsubscribe") == 0 ||
+	    strcmp(type, "unsubscribed") == 0)
+		return true;
+
 	return false;
 }
 
@@ -51,11 +55,11 @@ void
 usage(void)
 {
 	fprintf(stderr,
-		"presence [-d <dir>] [-t <to>] [-s <show>] [-p <prio>] [type]\n"
-		"  prio: -128..127\n"
-		"  show: away|chat|dnd|xa\n"
-		"  type: subscribe|subscribed|unavailable|unsubscribe|"
-		    "unsubscribed\n");
+	    "presence [-d <dir>] [-t <to>] [-s <show>] [-p <prio>] [type]\n"
+	    "  prio: -128..127\n"
+	    "  show: away|chat|dnd|xa\n"
+	    "  type: subscribe|subscribed|unavailable|unsubscribe|"
+	    "unsubscribed\n");
 
 	exit(EXIT_FAILURE);
 }
