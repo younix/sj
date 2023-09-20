@@ -65,7 +65,8 @@ list(mxml_node_t *iq)
 	if (iq == NULL) return false;
 	if ((item = mxmlGetFirstChild(iq)) == NULL) return false;
 
-	for (item = mxmlGetFirstChild(item); item != NULL; item = mxmlGetNextSibling(item)) {
+	for (item = mxmlGetFirstChild(item); item != NULL;
+	    item = mxmlGetNextSibling(item)) {
 		const char *name = mxmlElementGetAttr(item, "name");
 		const char *jid = mxmlElementGetAttr(item, "jid");
 		const char *sub = mxmlElementGetAttr(item, "subscription");
@@ -171,11 +172,13 @@ main(int argc, char *argv[])
 	if (close(fd) == -1) goto err;
 	if (unlink(path_in) == -1) goto err;
 
-	if (list_flag)
-		if (list(mxmlGetNextSibling(mxmlGetFirstChild(tree))) == false) return EXIT_FAILURE;
+	if (list_flag &&
+	    list(mxmlGetNextSibling(mxmlGetFirstChild(tree))) == false)
+		return EXIT_FAILURE;
 
-	if (add_flag)
-		if (result(mxmlGetNextSibling(mxmlGetFirstChild(tree))) == false) return EXIT_FAILURE;
+	if (add_flag &&
+	    result(mxmlGetNextSibling(mxmlGetFirstChild(tree))) == false)
+		return EXIT_FAILURE;
 
 	return EXIT_SUCCESS;
  err:
