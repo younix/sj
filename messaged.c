@@ -223,7 +223,7 @@ send_message(struct context *ctx, struct contact *con)
 		size--;
 	}
 	/* These characters must be escaped. */
-	if (strcspn(buf, "<&") != size) { /* TODO: fix size_t vs ssize_t warning */
+	if ((ssize_t)strcspn(buf, "<&") != size) {
 		/* Get a new string. */
 		escaped = escape_tag(buf);
 	}
