@@ -137,13 +137,18 @@ recv_iq(char *tag, void *data)
 
 	snprintf(path, sizeof path, "%s/%s", ctx->dir, tag_id);
  output:
-	alarm(1);
-	if ((fd = open(path, O_WRONLY|O_APPEND|O_CREAT, S_IRUSR|S_IWUSR)) == -1) {
-		if (errno == EINTR)
+	if ((fd = open(path, O_WRONLY|O_APPEND|O_CREAT|O_NONBLOCK,
+	    S_IRUSR|S_IWUSR)) == -1) {
+		if (errno == ENXIO) {
+			static int block = 0;
+			if (block++ < 10) {
+				usleep(100000);
+				goto output;
+			}
 			goto out;
+		}
 		goto err;
 	}
-	alarm(0);
 	if (write(fd, tag, strlen(tag)) == -1) goto err;
 	if (close(fd) == -1) goto err;
  err:
