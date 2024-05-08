@@ -1,0 +1,58 @@
+.Dd $Mdocdate$
+.Dt PRESENCE 1
+.Os
+.Sh NAME
+.Nm presence
+.Nd XMPP presence function
+.
+.Sh SYNOPSIS
+.Nm presence
+.Op Fl d Ar directory
+.Op Fl p Ar priority
+.Op Fl s Ar show
+.Op Fl t Ar to
+.Op Ar type
+.
+.Sh DESCRIPTION
+The
+.Nm
+command writes a presence tag to a file named 
+.Sq in
+in the directory specified by either flag
+.Fl d
+or environment variable
+.Ev SJ_DIR .
+Program
+.Xr sj 1
+does not call
+.Nm .
+.Nm
+is for the user to call, after having started
+.Xr sj 1 .
+.Ss Options:
+.Bl -tag -width Ds
+.It Fl d
+Command line option
+.Fl d ,
+when provided, overrides the environment variable
+.Ev SJ_DIR .
+.It Fl p
+.Ar priority
+must be an integer between -128 and 127.
+.It Fl s
+.Ar show
+must be a valid XMPP presence show.
+.It Fl t
+.Ar to
+is the recipient.
+.El
+.Ss Argument:
+The optional argument
+.Ar type
+must be a valid XMPP presence type.
+.
+.Sh ENVIRONMENT
+.Ev SJ_DIR
+.
+.Sh SEE ALSO
+.Xr sj 1
