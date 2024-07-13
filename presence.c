@@ -55,9 +55,10 @@ void
 usage(void)
 {
 	fprintf(stderr,
-	    "presence [-d <dir>] [-t <to>] [-s <show>] [-p <prio>] [type]\n"
+	    "presence [-d <dir>] [-t <to>] [-s <show>] [-S <status>] [-p <prio>] [type]\n"
 	    "  prio: -128..127\n"
 	    "  show: away|chat|dnd|xa\n"
+	    "  status: status text\n"
 	    "  type: subscribe|subscribed|unavailable|unsubscribe|"
 	    "unsubscribed\n");
 
