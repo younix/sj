@@ -81,7 +81,7 @@ main(int argc, char *argv[])
 	char show_str[BUFSIZ];
 	char status_str[BUFSIZ];
 
-	while ((ch = getopt(argc, argv, "d:t:s:p:h")) != -1) {
+	while ((ch = getopt(argc, argv, "d:t:s:S:p:h")) != -1) {
 		switch (ch) {
 		case 'd':
 			dir = strdup(optarg);
@@ -124,6 +124,7 @@ main(int argc, char *argv[])
 	snprintf(to_str, sizeof to_str, "to='%s'", to);
 	snprintf(type_str, sizeof type_str, "type='%s'", type);
 	snprintf(show_str, sizeof show_str, "<show>%s</show>", show);
+	snprintf(status_str, sizeof status_str, "<status>%s</status>", status);
 
 	/* send query to server */
 	snprintf(path_out, sizeof path_out, "%s/%s", dir, "in");
