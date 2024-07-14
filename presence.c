@@ -85,18 +85,18 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "d:t:s:S:p:h")) != -1) {
 		switch (ch) {
 		case 'd':
-			dir = strdup(optarg);
+			dir = optarg;
 			break;
 		case 't':
-			if ((to = strdup(optarg)) == NULL) goto err;
+			to = optarg;
 			break;
 		case 's':
-			if ((show = strdup(optarg)) == NULL) goto err;
+			show = optarg;
 			if (isshow(show) == false)
 				usage();
 			break;
 		case 'S':
-			if ((status = strdup(optarg)) == NULL) goto err;
+			status = optarg;
 			break;
 		case 'p':
 			priority = strtol(optarg, NULL, 0);

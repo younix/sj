@@ -178,7 +178,7 @@ main(int argc, char *argv[])
 			ctx.fd_in = strtol(optarg, NULL, 0);
 			break;
 		case 'd':
-			ctx.dir = strdup(optarg);
+			ctx.dir = optarg;
 			break;
 		default:
 			usage();

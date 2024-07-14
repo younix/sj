@@ -104,21 +104,21 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "d:g:n:la:r:h")) != -1) {
 		switch (ch) {
 		case 'd':
-			dir = strdup(optarg);
+			dir = optarg;
 			break;
 		case 'g':
-			if ((group = strdup(optarg)) == NULL) goto err;
+			group = optarg;
 			break;
 		case 'n':
-			if ((name = strdup(optarg)) == NULL) goto err;
+			name = optarg;
 			break;
 		case 'a':
 			add_flag = true;
-			if ((jid = strdup(optarg)) == NULL) goto err;
+			jid = optarg;
 			break;
 		case 'r':
 			remove_flag = true;
-			if ((jid = strdup(optarg)) == NULL) goto err;
+			jid = optarg;
 			break;
 		case 'h':
 		default:

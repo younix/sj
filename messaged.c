@@ -350,13 +350,13 @@ main(int argc, char *argv[])
 			ctx.fd_in = strtol(optarg, NULL, 0);
 			break;
 		case 'o':
-			ctx.out_file = strdup(optarg);
+			ctx.out_file = optarg;
 			break;
 		case 'j':
-			ctx.jid = strdup(optarg);
+			ctx.jid = optarg;
 			break;
 		case 'd':
-			ctx.dir = strdup(optarg);
+			ctx.dir = optarg;
 			break;
 		default:
 			usage();

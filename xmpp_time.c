@@ -60,8 +60,7 @@ main(int argc, char *argv[])
 	while ((ch = getopt(argc, argv, "d:h")) != -1) {
 		switch (ch) {
 		case 'd':
-			if ((dir = strdup(optarg)) == NULL)
-				err(EXIT_FAILURE, "strdup");
+			dir = optarg;
 			break;
 		case 'h':
 		default:

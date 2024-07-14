@@ -404,16 +404,16 @@ main(int argc, char *argv[])
 			debug = true;
 			break;
 		case 'd':
-			ctx.dir = strdup(optarg);
+			ctx.dir = optarg;
 			break;
 		case 's':
-			ctx.server = strdup(optarg);
+			ctx.server = optarg;
 			break;
 		case 'u':
-			ctx.user = strdup(optarg);
+			ctx.user = optarg;
 			break;
 		case 'r':
-			ctx.resource = strdup(optarg);
+			ctx.resource = optarg;
 			break;
 		default:
 			usage();
