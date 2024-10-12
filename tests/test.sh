@@ -4,7 +4,7 @@ export MALLOC_OPTIONS="S"
 
 . ./tap-functions -u
 
-plan_tests 12
+plan_tests 13
 
 # prepare
 
@@ -54,6 +54,11 @@ ok $? "empty messages are accepted"
 
 grep -q '^....-..-.. ..:.. <cari@server.org/.*> consectetur$' "$tmpdir/cari@server.org/out"
 ok $? "message without active element is accepted"
+
+echo "Left angle bracket (<) and ampersands (&) MUST be escaped!" >> "$tmpdir/cari@server.org/in" &
+echo "" | $messaged -j "me@server.org" -d $tmpdir
+grep -q '>Left angle bracket (&lt;) and ampersands (&amp;) MUST be escaped!<' "$tmpdir/in"
+ok $? "input xml characters are escaped"
 
 #
 # presenced tests
