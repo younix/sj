@@ -187,7 +187,7 @@ escape_tag(const char *string)
 			strlcat(new, "&lt;", length);
 			break;
 		case '&':
-			strlcat(new, "&lt;", length);
+			strlcat(new, "&amp;", length);
 			break;
 		default:
 			ch[0] = string[0];
