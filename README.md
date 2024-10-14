@@ -2,9 +2,9 @@
 
 Simple jabber client based on ideas from "Irc It".
 
-Official website: http://klemkow.net/sj.html
+Official website: https://klemkow.net/sj.html
 
-Paper of the [slcon2](http://suckless.org/conference/): http://klemkow.net/sj.pdf
+Paper of the [slcon2](https://suckless.org/conferences/2015/): https://klemkow.net/sj.pdf
 
 ## Goals
 
@@ -27,7 +27,7 @@ The program "sj" just does a few things:
 
   * mxml 2.8 or 3.x
   * libbsd (for GNU-systems like Linux)
-  * [ucspi-tcp](http://cr.yp.to/ucspi-tcp.html)
+  * [ucspi-tcp](https://cr.yp.to/ucspi-tcp.html)
   * [ucspi-tools](https://github.com/younix/ucspi)
 
 ## usage
