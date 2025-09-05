@@ -9,7 +9,7 @@ CFLAGS	:= -std=c99 -pedantic -Wall -Wextra -O3 $(DEBUG) $(DEFINES)
 CFLAGS_MXML := `pkg-config --cflags mxml`
 LIBS_MXML := `pkg-config --libs mxml`
 
-.PHONY: all tests clean debug update install
+.PHONY: all tests clean debug update install uninstall
 .SUFFIXES: .o .c
 
 BINS=sj messaged presenced iqd roster presence xmpp_time
@@ -78,6 +78,9 @@ update:
 install:
 	mkdir -p ${HOME}/bin
 	cp $(BINS) ${HOME}/bin
+
+uninstall:
+	for item in $(BINS); do rm -f ${HOME}/bin/$$item; done
 
 tests:
 	cd tests && ./test.sh
