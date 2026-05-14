@@ -121,11 +121,13 @@ check_contact(struct context *ctx, struct contact *c)
 	if (c->mystatus != NULL) {
 		if (strncmp(buf, c->mystatus, sizeof buf) != 0) {
 			free(c->mystatus);
-			c->mystatus = strdup(buf);
+			if ((c->mystatus = strdup(buf)) == NULL)
+				goto err;
 			send_presence(ctx, c);
 		}
 	} else {
-		c->mystatus = strdup(buf);
+		if ((c->mystatus = strdup(buf)) == NULL)
+			goto err;
 		send_presence(ctx, c);
 	}
 
