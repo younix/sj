@@ -270,8 +270,8 @@ recv_message(char *tag, void *data)
 			break;
 
 	/* if message comes from an unknown JID, create a contact */
-	if (c == NULL)
-		c = add_contact(ctx, from);
+	if (c == NULL && (c = add_contact(ctx, from)) == NULL)
+		goto err;
 
 	body = mxmlFindElement(tree, tree, "body", NULL, NULL,
 	    MXML_DESCEND);
