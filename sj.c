@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2013-2026 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -233,8 +233,7 @@ has_attr(mxml_node_t *node, const char *attr, const char *value)
 static bool
 has_tag(mxml_node_t *node, const char *tag)
 {
-	if (node == NULL)
-		assert(true);
+	assert(node != NULL);
 
 	if (mxmlFindElement(node, node, tag, NULL, NULL, MXML_DESCEND_FIRST)
 	    == NULL)
@@ -277,7 +276,8 @@ server_tag(char *tag, void *data)
 		else if (ctx->state == AUTH)
 			xmpp_bind(ctx);
 		else
-			assert(true);
+			abort();
+
 		goto out;
 	}
 
