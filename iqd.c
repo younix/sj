@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2014-2026 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -162,7 +162,8 @@ recv_iq(char *tag, void *data)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: iqd -d DIR\n");
+	fputs("usage: iqd -d dir\n", stderr);
+
 	exit(EXIT_FAILURE);
 }
 

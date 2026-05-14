@@ -38,7 +38,8 @@ send_time(FILE *fh, const char *to, const char *id)
 static void
 usage(void)
 {
-	fprintf(stderr, "xmpp:time [-d dir]\n");
+	fputs("xmpp:time [-d dir]\n", stderr);
+
 	exit(EXIT_FAILURE);
 }
 

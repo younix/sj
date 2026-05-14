@@ -364,13 +364,9 @@ init_dir(struct context *ctx)
 static void
 usage(void)
 {
-	fprintf(stderr, "usage: sj OPTIONS\n"
-		"OPTIONS:\n"
-		"\t-u <user>\n"
-		"\t-s <server>\n"
-		"\t-r <resource>\n"
-		"\t-d <directory>\n"
-		"\t-D \n");
+	fputs("usage: sj [-D] [-s server] [-u user] [-r resource] "
+	    "[-d directory]\n", stderr);
+
 	exit(EXIT_FAILURE);
 }
 

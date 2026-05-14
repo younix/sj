@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2014-2026 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -54,13 +54,12 @@ istype(const char *type)
 void
 usage(void)
 {
-	fprintf(stderr,
-	    "presence [-d <dir>] [-t <to>] [-s <show>] [-S <status>] [-p <prio>] [type]\n"
+	fputs("presence [-d dir] [-t to] [-s show] [-S status] [-p prio] [type]\n"
 	    "  prio: -128..127\n"
 	    "  show: away|chat|dnd|xa\n"
 	    "  status: status text\n"
 	    "  type: subscribe|subscribed|unavailable|unsubscribe|"
-	    "unsubscribed\n");
+	    "unsubscribed\n", stderr);
 
 	exit(EXIT_FAILURE);
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015 Jan Klemkow <j.klemkow@wemelug.de>
+ * Copyright (c) 2014-2026 Jan Klemkow <j.klemkow@wemelug.de>
  *
  * Permission to use, copy, modify, and distribute this software for any
  * purpose with or without fee is hereby granted, provided that the above
@@ -79,9 +79,10 @@ list(mxml_node_t *iq)
 static void
 usage(void)
 {
-	fprintf(stderr, "roster [-d <dir>]\n");
-	fprintf(stderr, "roster [-d <dir>] [-n <name>] [-g group] -a <jid>\n");
-	fprintf(stderr, "roster [-d <dir>] -r <jid>\n");
+	fputs("roster [-d dir]\n"
+	    "roster [-d dir] [-n name] [-g group] -a jid\n"
+	    "roster [-d dir] -r jid\n", stderr);
+
 	exit(EXIT_FAILURE);
 }
 
