@@ -162,7 +162,7 @@ recv_iq(char *tag, void *data)
 static void
 usage(void)
 {
-	fputs("usage: iqd -d dir\n", stderr);
+	fputs("usage: iqd [-d dir]\n", stderr);
 
 	exit(EXIT_FAILURE);
 }
