@@ -116,6 +116,7 @@ static void
 xmpp_ping(struct context *ctx)
 {
 	char msg[BUFSIZ];
+
 	snprintf(msg, sizeof msg,
 	    "<iq from='%s@%s/%s' to='%s' id='%s' type='get'>"
 		"<ping xmlns='urn:xmpp:ping'/>"
@@ -129,6 +130,7 @@ static void
 xmpp_session(struct context *ctx)
 {
 	char msg[BUFSIZ];
+
 	snprintf(msg, sizeof msg,
 	    "<iq to='%s' type='set' id='sess_1'>"
 		"<session xmlns='urn:ietf:params:xml:ns:xmpp-session'/>"
@@ -141,6 +143,7 @@ static void
 xmpp_bind(struct context *ctx)
 {
 	char *msg = NULL;
+
 	asprintf(&msg,
 	    "<iq type='set' id='bind_2'>"
 		"<bind xmlns='urn:ietf:params:xml:ns:xmpp-bind'>"
@@ -182,6 +185,7 @@ static void
 xmpp_init(struct context *ctx)
 {
 	char msg[BUFSIZ];
+
 	snprintf(msg, sizeof msg,
 	    "<?xml version='1.0'?>"
 	    "<stream:stream "
@@ -221,6 +225,7 @@ static bool
 has_attr(mxml_node_t *node, const char *attr, const char *value)
 {
 	const char *v = NULL;
+
 	if (node == NULL || attr == NULL || value == NULL)
 		return false;
 
@@ -255,7 +260,8 @@ server_tag(char *tag, void *data)
 	static mxml_node_t *tree = NULL;
 	const char *base = "<?xml ?><stream:stream></stream:stream>";
 
-	if (tree == NULL) tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
+	if (tree == NULL)
+		tree = mxmlLoadString(NULL, base, MXML_NO_CALLBACK);
 	assert(tree != NULL);
 	mxmlLoadString(tree, tag, MXML_NO_CALLBACK);
 	/* End of HACK */
@@ -284,6 +290,7 @@ server_tag(char *tag, void *data)
 	/* starttls successful */
 	if (strcmp("proceed", tag_name) == 0) {
 		char *argv[argc0 + 1];
+
 		argv[0] = "tlsc";
 		memcpy(argv + 1, argv0, sizeof(argv) - 1);
 		execvp("tlsc", argv);
@@ -380,16 +387,14 @@ int
 main(int argc, char *argv[])
 {
 	int ch;
+	struct context ctx = NULL_CONTEXT;	/* all context informations */
 
-	/* struct with all context informations */
-	struct context ctx = NULL_CONTEXT;
-	asprintf(&ctx.id, "sj-%d", getpid());
-	ctx.state = OPEN;	/* set inital state of the connection */
-
+	ctx.state    = OPEN;	/* set inital state of the connection */
 	ctx.user     = getenv("SJ_USER");
 	ctx.server   = getenv("SJ_SERVER");
 	ctx.resource = getenv("SJ_RESOURCE");
 	ctx.dir      = getenv("SJ_DIR");
+	asprintf(&ctx.id, "sj-%d", getpid());
 
 	argv0 = argv;
 	argc0 = argc;
